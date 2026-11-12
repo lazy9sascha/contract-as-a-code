@@ -1,0 +1,9 @@
+# Organization
+
+Definition revisions follow the index registry. Every row inherits [the library interface](../pattern-library.md), slot rules, annotation, checks, and maturity.
+
+| ID and purpose | Behavior slots | Semantics and failures | Children/context | Filled instance and expected result | Incomplete instance and expected finding | Specific checks |
+| --- | --- | --- | --- | --- | --- | --- |
+| ORG-MODULE: expose definitions and initialize dependencies | R `definitions:Map<Name,Ref<Definition>>[0..n]`, `imports:Map<Name,Ref<Definition>>[0..n]`, `exports:Set<Name>[0..n]`, `visibility:enum(explicit-only)`, `initializers:List<Op>[0..n]`, `cycle:enum(reject,declared-fixed-point)`, `failure:enum(stop-and-report)`. C(cycle=declared-fixed-point) `convergence:Predicate`, `maximumSteps:Nat`. | Resolve imports to exact revisions before use. Export only declared local or imported names. Initialize once in list order after imported initialization dependencies complete. Reject unresolved cycles unless a bounded fixed point is declared. Initialization failure blocks dependent initialization and retains known effects. Empty module initializes without effects. | definitions 0..n, initializers 0..n sequential. Module-local names remain private except explicit exports. No implicit runtime tools or external effects. Module/contract. | definitions={id:Id}, imports={}, exports={id}, visibility=explicit-only, initializers=[], cycle=reject, failure=stop-and-report. Only id is visible outside. | exports={missing} without a declaration or import. Finding `unresolved-export`, path exports.missing. | N checks actual declarations, imports and visibility. C checks dependency order, cycles, initialization failure and retained effects. |
+
+Definition references resolve declarations, not substrings in function names or comments. Renamed imports preserve target identity through explicit bindings.

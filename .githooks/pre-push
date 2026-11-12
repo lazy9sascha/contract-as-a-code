@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+echo "Running pre-push checks..."
+cargo test --offline --locked
+cargo clippy --all-targets --offline --locked -- -D warnings
+echo "Pre-push checks passed."

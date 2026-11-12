@@ -1,0 +1,21 @@
+name: caac checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+      - name: cargo test
+        run: cargo test --locked
+      - name: cargo clippy
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - name: contract syntax check
+        run: cargo run -- check CONTRACT.md contracts/tooling.md examples/batch-division.md

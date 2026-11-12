@@ -1,0 +1,14 @@
+# Deploy-time exclusions (git archive / GitHub release)
+docs/task/ export-ignore
+docs/task/** export-ignore
+docs/research/ export-ignore
+docs/research/** export-ignore
+BRAINSTORM.md export-ignore
+target/ export-ignore
+target/** export-ignore
+.dev/ export-ignore
+.dev/** export-ignore
+docs/design/integration/ export-ignore
+docs/design/integration/** export-ignore
+AGENTS.md export-ignore
+BRAINSTORM.md export-ignore

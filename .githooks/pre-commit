@@ -1,0 +1,29 @@
+#!/bin/sh
+set -e
+
+echo "Running pre-commit checks..."
+
+# Rust formatting
+cargo fmt --all -- --check || {
+    echo "cargo fmt failed. Run: cargo fmt --all"
+    exit 1
+}
+
+# Rust tests
+cargo test --offline --locked || {
+    echo "cargo test failed."
+    exit 1
+}
+
+# Rust clippy
+cargo clippy --all-targets --offline --locked -- -D warnings || {
+    echo "cargo clippy failed."
+    exit 1
+}
+
+# Syntax check on contract files
+if [ -f scripts/check_contracts.sh ]; then
+    sh scripts/check_contracts.sh || exit 1
+fi
+
+echo "Pre-commit checks passed."

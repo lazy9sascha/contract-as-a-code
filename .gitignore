@@ -1,0 +1,4 @@
+task/
+!docs/task/
+!docs/task/**
+/target/

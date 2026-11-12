@@ -1,0 +1,15 @@
+#!/bin/sh
+# Validate conventional commit message format.
+msg=$(cat "$1")
+pattern="^(feat|fix|docs|chore|refactor|test|style|perf|ci|build)(\(.+\))?: .+"
+
+if ! echo "$msg" | head -1 | grep -qE "$pattern"; then
+    echo "Commit message must follow conventional commits format:"
+    echo "  feat: description"
+    echo "  fix: description"
+    echo "  docs: description"
+    echo "  chore: description"
+    echo "  refactor: description"
+    echo "  test: description"
+    exit 1
+fi
