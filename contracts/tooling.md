@@ -1,6 +1,6 @@
 # Local tooling contract
 
-Revision: draft-1. Status: draft. Scope: local CLI authoring support and example execution.
+Revision: draft-2. Status: draft. Scope: local CLI authoring support and example execution.
 
 The user requested implementation in this session. That request authorizes prototype work, not approval of generated contract requirements.
 
@@ -90,6 +90,18 @@ TOOL-027 | Every successful check must state that semantic review remains pendin
 
 These checks do not identify all undefined domain terms, missing branches, conflicting meanings, or invalid inheritance. They do not authenticate approval.
 
+## Markdown admission profile (non-normative)
+
+The checker and Markdown converter share Comrak 0.59.0 structure and source locations. Only the initial YAML frontmatter extension is enabled. GFM table parsing is disabled because its transformed cell positions do not preserve raw source offsets. A valid generated CAAC metadata prefix permits frontmatter immediately after that prefix.
+
+Analysis normalizes the supported physical line separators without changing the source file. Diagnostics retain physical line numbers. Canonical fields retain source spelling, including escapes and entities. Complete HTML comments are omitted only when their spans match the source. Invalid source ranges produce errors. Inline code suppresses explanatory normative markers, but not explicit clause references.
+
+The supported normative profile uses plain ATX headings without closing hashes. Closed, top-level fenced code blocks are illustrative. Setext or formatted headings, block quotes, indented or container code, multiline inline code, and raw or mixed HTML are unsupported in normative content. These structures produce errors instead of silently removing obligations. An unsupported peer heading cannot prolong a non-normative exclusion. Unclosed fences, comments, and frontmatter remain errors.
+
+CAAC admission remains separate from CommonMark recognition. Operation declarations still use the declared dash notation. Case rows still require four explicit outer-pipe cells and the existing escaped-pipe encoding. Library recognition does not expand either domain format. Generated metadata still requires exact body validation for schema recovery.
+
+This profile is not arbitrary Markdown conversion, semantic completeness, or owner acceptance.
+
 ## Example binding
 
 The executable example follows [the batch contract](../examples/batch-division.md).
@@ -166,11 +178,32 @@ TOOL-049 | `CLI` must support multiple input files for modular contracts.
 TOOL-050 | `CLI` must merge multiple schemas into one output.
 
 The schema is the source of truth. Markdown and code are derived artifacts.
+Generated artifacts contain versioned schema metadata. Recovery checks their
+complete rendered contents against that metadata before restoring the schema.
+The metadata preserves authored values; it does not authenticate owner approval.
+Rust metadata also carries fields absent from the trait body, including cases and
+standalone invariants. Editing those fields can remain body-consistent.
+Recovery is not proof of the original revision or its acceptance.
+Exact-body recovery uses the current renderer. Preserve canonical JSON and regenerate
+views after layout changes. The metadata version identifies schema encoding, not layout compatibility.
+Unknown JSON fields, conflicting merge definitions, and unsupported Rust
+signatures are rejected instead of silently removed.
+Rust generation accepts a bounded identifier and type subset. Function-pointer
+types, explicit lifetimes, comments, attributes, and raw identifiers are unsupported.
+The Rust parser is `syn`. A schema signature field has a 4096-byte limit.
+Each parameter or return field permits at most 64 reference, generic, or parenthesis openings.
+This complexity budget applies before parsing. Type-name resolution requires a Rust compiler.
+Admission does not establish type correctness or compilation.
+The elision guard checks explicit references, not lifetimes hidden in nominal types such as `Cow`.
+Unsupported syntax and ambiguous explicit-reference returns fail before output.
+Contract inheritance references remain metadata, not Rust supertraits.
+Generated traits declare signatures; they do not implement contract behavior.
 
 ## Parse and extract
 
 `parse` reads a Markdown contract and produces a JSON schema.
-`extract` reads a Rust source file and produces a JSON schema.
+`extract` restores a schema from unchanged CAAC-generated Rust with supported metadata.
+Unmarked, body-inconsistent, or unsupported Rust is rejected. Arbitrary Rust import is not supported.
 
 TOOL-051 | `CLI` must parse Markdown contract clauses into JSON schema clauses.
 
@@ -178,14 +211,26 @@ TOOL-052 | `CLI` must parse Markdown operation signatures into JSON operations.
 
 TOOL-053 | `CLI` must parse Markdown contract cases into JSON cases.
 
-TOOL-054 | `CLI` must extract Rust trait methods into JSON operations.
+TOOL-054 | `CLI` must restore operations from verified CAAC-generated Rust metadata.
 
-TOOL-055 | `CLI` must extract doc comments as clause obligations.
+TOOL-055 | `CLI` must preserve complete schema obligations when recovering verified generated artifacts.
 
-TOOL-056 | `CLI` must preserve clause IDs found in doc comments during extraction.
+TOOL-056 | `CLI` must reject generated artifacts whose rendered contents conflict with embedded schema.
 
-Together, `gen`, `md`, `parse`, and `extract` enable bidirectional conversion
-between schema, Markdown, and Rust code.
+These commands preserve the schema through unchanged generated artifacts.
+Handwritten Markdown parsing supports explicit clauses across sections, operation
+signatures, declared operation sections, standalone invariants, terms, cases,
+exclusions, and base references. Examples, comments, frontmatter, and declared
+non-normative sections do not supply obligations. Unknown local clause references
+and malformed supported structures are rejected. Nested normative headings and
+standalone condition markers are unsupported. General prose interpretation and
+legal-style structure remain outside this parser's admitted grammar.
+Operation lists require `-` entries. Case tables require outer pipe characters.
+Other nonblank content in these sections is rejected, except resolved DECISION annotations.
+Those annotations do not create canonical obligations or prove that answers were implemented.
+Clause reference checks cover actors and obligations in Markdown and JSON admission.
+Generation rejects escaping that changes a clause's reference roles.
+Arbitrary natural-language prose is not converted into executable semantics.
 
 ## Suggest
 
@@ -202,7 +247,9 @@ TOOL-060 | `CLI` must not auto-apply suggestions. The owner decides.
 
 ## Contract harness
 
-`run` executes the contract completion loop: check, interview, repair, re-check.
+`run` executes a pre-review loop: check, interview, repair, re-check.
+A successful pre-review check does not establish semantic completion, executed
+case results, independent review, or owner acceptance.
 
 TOOL-061 | `CLI` must run declared syntax checks on the first iteration.
 
@@ -232,7 +279,11 @@ TOOL-069 | `CLI` must accept `--slots JSON` to fill pattern slots.
 
 TOOL-070 | `CLI` must replace `{slot}` placeholders in the template with provided values.
 
-TOOL-071 | `CLI` must warn about unfilled slots.
+TOOL-071 | `CLI` must reject missing used slots when the caller supplies `--slots`.
+
+Bound generation rejects unknown slots, unsupported bindings, and values outside the supported identifier or type grammar before creating output.
+The list distinguishes bindable slots from declared slots that the scaffold does not implement.
+Without `--slots`, generation exports an unbound scaffold. It does not validate compilation or behavior.
 
 The pattern library provides prepared counterparts. Slot filling is the
 author's responsibility. Generated code is a scaffold, not a complete implementation.
@@ -252,8 +303,13 @@ TOOL-075 | `CLI` must support `--watch` for continuous regeneration.
 
 TOOL-076 | `CLI` must support `--interval` for watch polling.
 
-The sync command enables bidirectional conversion. It does not
-auto-apply changes to source files. Repair remains the author's responsibility.
+Sync regenerates outputs from the schema only. It is not reverse synchronization.
+Initial destination paths are absent. Existing paths are rejected.
+Preflight detects exact and resolved-parent collisions, but not every filesystem alias.
+Watch updates only outputs created by its current invocation. Detected external
+output edits stop regeneration. This check is not a lock against simultaneous writers.
+Publication is atomic per file, not transactional across several outputs.
+An I/O failure can leave earlier outputs published; the error reports that limit.
 
 ## Interview and resume
 
@@ -274,13 +330,17 @@ TOOL-043 | `CLI` must support `--auto` mode that skips all prompts.
 
 TOOL-044 | `CLI` must report resolved and skipped counts.
 
-The interview supports the contract completion loop. It does not invent
+The interview supports the pre-review loop. It does not invent
 owner decisions. Unanswered questions remain as `OPEN:` lines.
+Answers are single-line text without HTML comment delimiters. The same restriction
+applies before pending answers are replayed. This is a Markdown-specific boundary,
+not a source-language-neutral sanitizer.
 
 
 ## Prototype limits
 
-No command compiles natural language, generates approved obligations, switches live traffic, or edits an existing project.
+No command compiles natural language, generates approved obligations, or switches live traffic.
+Interview deliberately edits its selected contract. Watch sync updates its own generated outputs.
 
 Authoring commands generate review scaffolds. Human or agent review supplies requirement text and records unresolved meaning explicitly.
 

@@ -19,39 +19,19 @@ pub fn check(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
         let path_text = path.display().to_string();
         let contents = fs::read_to_string(path).map_err(|error| format!("{path_text}: {error}"))?;
         let mut clause_count = 0;
-        let mut fence: Option<(char, usize, usize)> = None;
-        let mut comment_start = None;
-        let mut excluded = None;
-
-        for (line_index, raw) in split_lines(&contents).into_iter().enumerate() {
-            let line_number = line_index + 1;
-            if let Some((marker, length, _)) = fence {
-                if closes_fence(raw.trim(), marker, length) {
-                    fence = None;
-                }
-                continue;
-            }
-
-            let visible = remove_comments(raw, line_number, &mut comment_start);
-            let line = visible.trim();
-
-            if let Some((marker, length)) = opening_fence(line) {
-                fence = Some((marker, length, line_number));
-                continue;
-            }
-
-            if let Some((level, title)) = heading(line) {
-                if excluded.is_some_and(|current| level <= current) {
-                    excluded = None;
-                }
-                if excluded.is_none() && title.to_lowercase().contains("(non-normative)") {
-                    excluded = Some(level);
-                }
-            }
-
-            if excluded.is_some() || line.is_empty() {
-                continue;
-            }
+        let projection = crate::markdown::project(&contents);
+        for issue in projection.issues {
+            report(
+                &mut diagnostics,
+                &path_text,
+                issue.line,
+                issue.code,
+                issue.message,
+            );
+        }
+        for record in projection.lines {
+            let line_number = record.number;
+            let line = record.text.as_str();
 
             if let Some(decision) = line.strip_prefix("OPEN:") {
                 let message = decision.trim();
@@ -128,7 +108,7 @@ pub fn check(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
                     "clause-shape",
                     "Expected ID | sentence",
                 );
-            } else if !line.starts_with('|') && find_marker(&without_quoted_text(line)).is_some() {
+            } else if has_unnumbered_obligation(&record.marker_text) {
                 report(
                     &mut diagnostics,
                     &path_text,
@@ -145,24 +125,6 @@ pub fn check(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
             );
         }
 
-        if let Some((_, _, opening_line)) = fence {
-            report(
-                &mut diagnostics,
-                &path_text,
-                opening_line,
-                "unclosed-fence",
-                "Code fence has no closing marker",
-            );
-        }
-        if let Some(opening_line) = comment_start {
-            report(
-                &mut diagnostics,
-                &path_text,
-                opening_line,
-                "unclosed-comment",
-                "HTML comment has no closing marker",
-            );
-        }
         if clause_count == 0 {
             report(
                 &mut diagnostics,
@@ -197,107 +159,6 @@ fn report(diagnostics: &mut Vec<Diagnostic>, path: &str, line: usize, code: &str
     });
 }
 
-fn split_lines(text: &str) -> Vec<&str> {
-    let mut lines = Vec::new();
-    let mut start = 0;
-    let mut index = 0;
-    while index < text.len() {
-        let character = text[index..]
-            .chars()
-            .next()
-            .expect("valid character boundary");
-        let length = character.len_utf8();
-        if is_line_break(character) {
-            lines.push(&text[start..index]);
-            index += length;
-            if character == '\r' && text[index..].starts_with('\n') {
-                index += 1;
-            }
-            start = index;
-        } else {
-            index += length;
-        }
-    }
-    if start < text.len() {
-        lines.push(&text[start..]);
-    }
-    lines
-}
-
-fn is_line_break(character: char) -> bool {
-    matches!(
-        character,
-        '\n' | '\r'
-            | '\u{000b}'
-            | '\u{000c}'
-            | '\u{001c}'
-            | '\u{001d}'
-            | '\u{001e}'
-            | '\u{0085}'
-            | '\u{2028}'
-            | '\u{2029}'
-    )
-}
-
-fn remove_comments(raw: &str, line_number: usize, comment_start: &mut Option<usize>) -> String {
-    let mut visible = String::new();
-    let mut remaining = raw;
-    loop {
-        if comment_start.is_some() {
-            if let Some(end) = remaining.find("-->") {
-                remaining = &remaining[end + 3..];
-                *comment_start = None;
-            } else {
-                break;
-            }
-        } else if let Some(start) = remaining.find("<!--") {
-            visible.push_str(&remaining[..start]);
-            remaining = &remaining[start + 4..];
-            *comment_start = Some(line_number);
-        } else {
-            visible.push_str(remaining);
-            break;
-        }
-    }
-    visible
-}
-
-fn opening_fence(line: &str) -> Option<(char, usize)> {
-    let marker = line.chars().next()?;
-    if marker != '`' && marker != '~' {
-        return None;
-    }
-    let length = line
-        .chars()
-        .take_while(|character| *character == marker)
-        .count();
-    (length >= 3).then_some((marker, length))
-}
-
-fn closes_fence(line: &str, marker: char, minimum: usize) -> bool {
-    let length = line
-        .chars()
-        .take_while(|character| *character == marker)
-        .count();
-    length >= minimum && line[length..].trim().is_empty()
-}
-
-fn heading(line: &str) -> Option<(usize, &str)> {
-    let level = line
-        .chars()
-        .take_while(|character| *character == '#')
-        .count();
-    if !(1..=6).contains(&level) {
-        return None;
-    }
-    let remainder = &line[level..];
-    let first = remainder.chars().next()?;
-    if !first.is_whitespace() {
-        return None;
-    }
-    Some((level, remainder.trim_start()))
-}
-
 fn parse_definition(line: &str) -> Option<(&str, &str)> {
     let (left, right) = line.split_once('|')?;
     let identifier = left.trim_end();
@@ -307,7 +168,7 @@ fn parse_definition(line: &str) -> Option<(&str, &str)> {
     Some((identifier, right.trim_start()))
 }
 
-fn valid_id(identifier: &str) -> bool {
+pub(crate) fn valid_id(identifier: &str) -> bool {
     let mut parts = identifier.split('-').collect::<Vec<_>>();
     if parts.len() < 2 {
         return false;
@@ -323,7 +184,7 @@ fn valid_id(identifier: &str) -> bool {
     })
 }
 
-fn looks_like_clause(line: &str) -> bool {
+pub(crate) fn looks_like_clause(line: &str) -> bool {
     if let Some((left, _)) = line.split_once('|') {
         let identifier = left.trim_end();
         if !identifier.is_empty()
@@ -343,6 +204,10 @@ fn looks_like_clause(line: &str) -> bool {
             .chars()
             .next()
             .is_some_and(char::is_whitespace)
+}
+
+pub(crate) fn has_unnumbered_obligation(line: &str) -> bool {
+    !line.starts_with('|') && find_marker(line).is_some()
 }
 
 fn find_marker(text: &str) -> Option<(usize, usize)> {
@@ -396,26 +261,7 @@ fn is_word_character(character: char) -> bool {
     character.is_alphanumeric() || character == '_'
 }
 
-fn without_quoted_text(line: &str) -> String {
-    let mut visible = String::new();
-    let mut inside = false;
-    let mut cursor = 0;
-    while cursor < line.len() {
-        let character = line[cursor..]
-            .chars()
-            .next()
-            .expect("valid character boundary");
-        if character == '`' {
-            inside = !inside;
-        } else if !inside {
-            visible.push(character);
-        }
-        cursor += character.len_utf8();
-    }
-    visible
-}
-
-fn find_references(text: &str) -> Vec<String> {
+pub(crate) fn find_references(text: &str) -> Vec<String> {
     let mut references = Vec::new();
     for (start, character) in text.char_indices() {
         if character != '@' {

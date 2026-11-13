@@ -1,107 +1,99 @@
 use std::fs;
 use std::path::PathBuf;
 
-/// Evaluate the completion gate for a contract.
+/// Evaluate a syntax and case-reference precheck, not semantic completion.
 /// Returns a list of unmet conditions.
 pub fn evaluate_completion(files: &[PathBuf]) -> Vec<String> {
     let mut issues = Vec::new();
 
-    // Read all files
-    let mut all_content = String::new();
+    let mut clause_ids = Vec::new();
+    let mut case_clause_refs = std::collections::HashSet::new();
     for file in files {
-        if let Ok(c) = fs::read_to_string(file) {
-            all_content.push_str(&c);
-            all_content.push('\n');
-        }
-    }
-
-    // Parse clauses and cases from the combined content
-    // (Simple heuristic: count clause definitions and case references)
-    let clause_ids: Vec<String> = all_content
-        .lines()
-        .filter_map(|line| {
-            let parts: Vec<&str> = line.splitn(2, '|').collect();
-            if parts.len() == 2 {
-                let id = parts[0].trim();
-                if is_clause_id(id) {
-                    return Some(id.to_owned());
+        let content = match fs::read_to_string(file) {
+            Ok(content) => content,
+            Err(error) => {
+                issues.push(format!("{}: {error}", file.display()));
+                continue;
+            }
+        };
+        match precheck_schema(&content) {
+            Ok(schema) => {
+                clause_ids.extend(schema.clauses.into_iter().map(|clause| clause.id));
+                for case in schema.cases {
+                    case_clause_refs.extend(
+                        case.clauses
+                            .into_iter()
+                            .map(|reference| reference.trim_start_matches('@').to_owned()),
+                    );
                 }
             }
-            None
-        })
-        .collect();
-
-    let case_clause_refs: Vec<String> = all_content
-        .lines()
-        .filter(|l| l.trim().starts_with('|') && !l.contains("---") && !l.contains("Case |"))
-        .flat_map(|line| {
-            let parts: Vec<&str> = line.split('|').collect();
-            if parts.len() >= 5 {
-                parts[4]
-                    .split(',')
-                    .map(|s| s.trim().to_owned())
-                    .filter(|s| !s.is_empty())
-                    .collect()
-            } else {
-                Vec::new()
-            }
-        })
-        .collect();
-
-    // Check 1: clauses exist
+            Err(error) => issues.push(format!("{}: {error}", file.display())),
+        }
+    }
     if clause_ids.is_empty() {
         issues.push("No clauses defined.".to_owned());
     }
-
-    // Check 2: all clauses have at least one case referencing them
-    let referenced: std::collections::HashSet<&str> =
-        case_clause_refs.iter().map(|s| s.as_str()).collect();
-    for cid in &clause_ids {
-        if !referenced.contains(cid.as_str()) {
-            issues.push(format!("Clause {} has no acceptance case.", cid));
+    for id in clause_ids {
+        if !case_clause_refs.contains(&id) {
+            issues.push(format!("Clause {id} has no acceptance case."));
         }
     }
-
-    // Check 3: open decisions
-    let open_count = all_content
-        .lines()
-        .filter(|l| l.trim().starts_with("OPEN:"))
-        .count();
-    if open_count > 0 {
-        issues.push(format!("{} open decision(s) remain.", open_count));
-    }
-
-    // Check 4: checker passes
     match crate::checker::check(files) {
-        Ok(diagnostics) if !diagnostics.is_empty() => {
-            issues.push(format!("{} syntax finding(s).", diagnostics.len()));
+        Ok(diagnostics) => {
+            let open_count = diagnostics
+                .iter()
+                .filter(|d| d.code == "open-decision")
+                .count();
+            if open_count > 0 {
+                issues.push(format!("{open_count} open decision(s) remain."));
+            }
+            if !diagnostics.is_empty() {
+                issues.push(format!("{} syntax finding(s).", diagnostics.len()));
+            }
         }
-        Err(e) => issues.push(format!("Check error: {}", e)),
-        _ => {}
+        Err(error) => issues.push(format!("Check error: {error}")),
     }
-
     issues
 }
 
-fn is_clause_id(s: &str) -> bool {
-    let mut parts = s.split('-').collect::<Vec<_>>();
-    if parts.len() < 2 {
-        return false;
+// Verify metadata consistency first, but derive coverage from the visible body.
+// This prevents a rendering bug from letting metadata conceal extra obligations.
+fn precheck_schema(content: &str) -> Result<crate::codegen::ContractSchema, String> {
+    let verified = crate::parse::parse_markdown(content)?;
+    if content.starts_with("<!-- caac-schema-v1:") {
+        let (_, body) = content
+            .split_once('\n')
+            .ok_or("metadata has no visible contract body")?;
+        visible_precheck_schema(body, &verified)
+    } else {
+        Ok(verified)
     }
-    let seq = parts.pop().unwrap();
-    if seq.len() != 3 || !seq.bytes().all(|b| b.is_ascii_digit()) {
-        return false;
+}
+
+fn visible_precheck_schema(
+    body: &str,
+    verified: &crate::codegen::ContractSchema,
+) -> Result<crate::codegen::ContractSchema, String> {
+    let visible = crate::parse::parse_markdown(body)?;
+    let expected: std::collections::BTreeSet<_> =
+        verified.clauses.iter().map(|clause| &clause.id).collect();
+    let observed: std::collections::BTreeSet<_> =
+        visible.clauses.iter().map(|clause| &clause.id).collect();
+    if expected != observed {
+        return Err(
+            "visible clause IDs differ from embedded schema; review the rendered contract".into(),
+        );
     }
-    parts.iter().all(|p| {
-        let mut b = p.bytes();
-        matches!(b.next(), Some(b'A'..=b'Z'))
-            && b.all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
-    })
+    Ok(visible)
 }
 
 /// Run the contract completion loop: check → repair → interview → re-check.
-/// Evaluates completion gate on each iteration.
+/// Evaluates the pre-review check on each iteration.
 pub fn run_loop(files: &[PathBuf], sources: &[String], max_iterations: u32) -> i32 {
+    if max_iterations == 0 {
+        eprintln!("ERROR: --max-iterations must be greater than zero.");
+        return 2;
+    }
     let mut iteration = 0u32;
 
     loop {
@@ -118,7 +110,7 @@ pub fn run_loop(files: &[PathBuf], sources: &[String], max_iterations: u32) -> i
         };
 
         if diagnostics.is_empty() {
-            println!("PASS: no syntax findings.");
+            println!("PASS: no syntax findings. Semantic review pending.");
         } else {
             println!("FAIL: {} finding(s):", diagnostics.len());
             for d in &diagnostics {
@@ -129,14 +121,16 @@ pub fn run_loop(files: &[PathBuf], sources: &[String], max_iterations: u32) -> i
         // Step 2: Evaluate completion gate
         let issues = evaluate_completion(files);
         if issues.is_empty() {
-            println!("\nCOMPLETION GATE: PASSED");
-            println!("  - All clauses have acceptance cases.");
+            println!("\nPRE-REVIEW CHECK: PASSED");
+            println!("  - All clauses have textual case references.");
             println!("  - No open decisions remain.");
             println!("  - Syntax check passed.");
-            println!("  - Ready for independent review.");
+            println!(
+                "  - Semantic review, executed case results, and owner acceptance remain pending."
+            );
             return 0;
         } else {
-            println!("\nCOMPLETION GATE: NOT PASSED");
+            println!("\nPRE-REVIEW CHECK: NOT PASSED");
             for issue in &issues {
                 println!("  - {}", issue);
             }
@@ -148,7 +142,8 @@ pub fn run_loop(files: &[PathBuf], sources: &[String], max_iterations: u32) -> i
         }
 
         // Step 3: Interview (if open decisions)
-        let has_open = issues.iter().any(|i| i.contains("open decision"));
+        let before: Vec<_> = files.iter().map(fs::read).collect();
+        let has_open = diagnostics.iter().any(|d| d.code == "open-decision");
         if has_open {
             let source_contents: Vec<String> = sources
                 .iter()
@@ -157,16 +152,16 @@ pub fn run_loop(files: &[PathBuf], sources: &[String], max_iterations: u32) -> i
             let source_refs: Vec<&str> = source_contents.iter().map(|s| s.as_str()).collect();
 
             for file in files {
-                let content = fs::read_to_string(file).unwrap_or_default();
-                let open_lines: Vec<&str> = content
-                    .lines()
-                    .filter(|l| l.trim().starts_with("OPEN:"))
+                let path = file.display().to_string();
+                let decisions: Vec<_> = diagnostics
+                    .iter()
+                    .filter(|d| d.code == "open-decision" && d.path == path)
                     .collect();
-                if !open_lines.is_empty() {
+                if !decisions.is_empty() {
                     if !source_refs.is_empty() {
                         println!("\nSuggestions for {}:", file.display());
-                        for ol in &open_lines {
-                            let decision = ol.trim().trim_start_matches("OPEN:").trim();
+                        for diagnostic in &decisions {
+                            let decision = diagnostic.message.as_str();
                             if let Some(suggestion) =
                                 crate::suggest::suggest_for_decision(decision, &source_refs)
                             {
@@ -175,28 +170,55 @@ pub fn run_loop(files: &[PathBuf], sources: &[String], max_iterations: u32) -> i
                             }
                         }
                     }
-                    crate::interview::run_interview(file, false);
+                    let result = crate::interview::run_interview(file, false);
+                    if result != 0 {
+                        return result;
+                    }
                 }
             }
         }
 
-        // Step 4: Watch for changes
-        println!("\nWaiting for file changes (Ctrl+C to stop)...");
-        let mut last_mtimes: Vec<std::time::SystemTime> = files.iter().map(file_mtime).collect();
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(2));
-            let current: Vec<std::time::SystemTime> = files.iter().map(file_mtime).collect();
-            if current != last_mtimes {
-                last_mtimes = current;
-                break;
-            }
+        // Our own changes require an immediate recheck, not another external save.
+        let changed =
+            files
+                .iter()
+                .zip(before)
+                .any(|(path, previous)| match (previous, fs::read(path)) {
+                    (Ok(previous), Ok(current)) => previous != current,
+                    _ => true,
+                });
+        if changed {
+            continue;
         }
-        println!("Files changed. Re-checking...");
+        println!(
+            "\nNO PROGRESS: decisions or manual repair remain. Update the contract and rerun."
+        );
+        return 1;
     }
 }
 
-fn file_mtime(path: &PathBuf) -> std::time::SystemTime {
-    fs::metadata(path)
-        .and_then(|m| m.modified())
-        .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn visible_precheck_rejects_extra_rendered_obligations_and_uses_visible_cases() {
+        let verified: crate::codegen::ContractSchema = serde_json::from_value(serde_json::json!({
+            "name": "Example",
+            "clauses": [{"id": "RULE-001", "actor": "Service", "obligation": "must return a value."}],
+            "cases": [{"name": "one", "input": "input", "expected": "value", "clauses": ["RULE-001"]}]
+        })).unwrap();
+        let body = "RULE-001 | Service must return a value.\n";
+        let visible = visible_precheck_schema(body, &verified).unwrap();
+        assert!(
+            visible.cases.is_empty(),
+            "metadata cases must not supply visible coverage"
+        );
+        let injected = format!("{body}RULE-999 | Service must erase data.\n");
+        assert!(
+            visible_precheck_schema(&injected, &verified)
+                .unwrap_err()
+                .contains("visible clause IDs differ")
+        );
+    }
 }
