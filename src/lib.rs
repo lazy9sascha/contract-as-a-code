@@ -5,6 +5,8 @@ pub mod codegen;
 pub mod extract;
 pub mod harness;
 pub mod interview;
+mod markdown;
+pub mod output;
 pub mod parse;
 pub mod patterns;
 pub mod suggest;

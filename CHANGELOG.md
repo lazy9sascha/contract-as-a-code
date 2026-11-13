@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.9.1] - 2026-11-13
+
+### Fixed
+- Reject unsupported or unsafe pattern bindings rather than generating misleading output.
+- Preserve complete schema data in verified generated artifacts; reject altered metadata, lossy Markdown admission, ambiguous merges and malformed signatures.
+- Protect existing files and aliases during artifact publication and sync.
+- Preserve interview checkpoints and contract clauses, recheck answers immediately, and share checker decisions with the harness.
+- Parse Markdown structure with Comrak to distinguish code, comments, headings and normative text.
+
+### Compatibility
+- Rust library callers must handle `Result<String, String>` from `generate_rust_trait` and `generate_markdown`, and `Result<ContractSchema, String>` from `merge_schemas`. This is a source-incompatible API correction despite the patch version.
+- Unsupported inputs that previously produced partial output now fail explicitly. Generated-artifact recovery requires matching metadata and content.
+
+### Scope
+- This patch contains bounded integrity repairs, not source-intake baselines, candidate authoring/interviews, revision manifests or legal-style rendering. Those features remain on the separate 0.10 development line.
+- Syntax checks and regression tests do not establish semantic completion, executed contract evidence or owner acceptance. Existing authoring-role and review-gate gaps remain open.
+
 ## [0.9.0] - 2026-11-13
 
 ### Added

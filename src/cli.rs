@@ -123,12 +123,28 @@ fn run_watch(args: &[String]) -> i32 {
     while index < args.len() {
         if args[index] == "--interval" {
             index += 1;
-            interval = args.get(index).and_then(|v| v.parse().ok()).unwrap_or(2);
+            interval = match args
+                .get(index)
+                .and_then(|v| v.parse::<u64>().ok())
+                .filter(|v| *v > 0)
+            {
+                Some(value) => value,
+                None => {
+                    return argument_error("--interval requires a positive integer", ROOT_USAGE);
+                }
+            };
         } else if args[index].starts_with("--interval=") {
-            interval = args[index]
+            interval = match args[index]
                 .trim_start_matches("--interval=")
-                .parse()
-                .unwrap_or(2);
+                .parse::<u64>()
+                .ok()
+                .filter(|v| *v > 0)
+            {
+                Some(value) => value,
+                None => {
+                    return argument_error("--interval requires a positive integer", ROOT_USAGE);
+                }
+            };
         } else if matches!(args[index].as_str(), "--help" | "-h") {
             println!(
                 "Watch files and re-run syntax checks on change.\n\nUsage: caac watch [--interval SECS] FILE..."
@@ -418,7 +434,7 @@ fn run_extract_cmd(args: &[String]) -> i32 {
             output = Some(PathBuf::from(args[index].trim_start_matches("--output=")));
         } else if matches!(args[index].as_str(), "--help" | "-h") {
             println!(
-                "Extract contract schema from Rust source.\n\nUsage: caac extract INPUT --output FILE"
+                "Recover schema from unchanged CAAC-generated Rust (metadata required).\n\nUsage: caac extract INPUT --output FILE"
             );
             return 0;
         } else if input.is_none() {
@@ -470,7 +486,7 @@ fn run_run_cmd(args: &[String]) -> i32 {
             }
         } else if matches!(args[index].as_str(), "--help" | "-h") {
             println!(
-                "Run the contract completion loop.\n\nUsage: caac run [--source FILE] [--max-iterations N] FILE..."
+                "Run syntax and case-reference prechecks; semantic review remains pending.\n\nUsage: caac run [--source FILE] [--max-iterations N] FILE..."
             );
             return 0;
         } else if args[index].starts_with('-') {
@@ -566,10 +582,19 @@ fn run_sync_cmd(args: &[String]) -> i32 {
             watch = true;
         } else if args[index] == "--interval" {
             index += 1;
-            interval = args.get(index).and_then(|v| v.parse().ok()).unwrap_or(2);
+            interval = match args
+                .get(index)
+                .and_then(|v| v.parse::<u64>().ok())
+                .filter(|v| *v > 0)
+            {
+                Some(value) => value,
+                None => {
+                    return argument_error("--interval requires a positive integer", ROOT_USAGE);
+                }
+            };
         } else if matches!(args[index].as_str(), "--help" | "-h") {
             println!(
-                "Sync contract schema to code and docs.\n\nUsage: caac sync INPUT --code FILE --docs FILE [--watch] [--interval SECS]"
+                "Generate code/docs at absent paths; watch updates only this session outputs.\n\nUsage: caac sync INPUT --code FILE --docs FILE [--watch] [--interval SECS]"
             );
             return 0;
         } else if args[index].starts_with('-') {

@@ -36,7 +36,7 @@ pub const PATTERNS: &[Pattern] = &[
         family: "abstraction",
         slots: &["base_trait", "extended_trait", "method_name"],
         required_slots: &["base_trait", "extended_trait", "method_name"],
-        template: "// ABS-INHERIT: derive at declared extension points\npub trait {base_trait} { fn {method_name}(&self, x: i64) -> i64; }\npub trait {extended_trait}: {base_trait} {{}}\n",
+        template: "// ABS-INHERIT: derive at declared extension points\npub trait {base_trait} { fn {method_name}(&self, x: i64) -> i64; }\npub trait {extended_trait}: {base_trait} {}\n",
     },
     Pattern {
         id: "ABS-COMPOSE",
@@ -317,7 +317,25 @@ pub fn run_list() -> i32 {
     for (family, patterns) in &families {
         println!("  {}:", family);
         for p in patterns {
-            println!("    {} - {} (slots: {})", p.id, p.name, p.slots.join(", "));
+            let (bound, unsupported): (Vec<&&str>, Vec<&&str>) = p
+                .slots
+                .iter()
+                .partition(|slot| p.template.contains(&format!("{{{slot}}}")));
+            println!("    {} - {} (scaffold only)", p.id, p.name);
+            println!(
+                "      Bindable slots: {}",
+                bound.into_iter().copied().collect::<Vec<_>>().join(", ")
+            );
+            if !unsupported.is_empty() {
+                println!(
+                    "      Unsupported slots: {}",
+                    unsupported
+                        .into_iter()
+                        .copied()
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+            }
         }
     }
     0
@@ -336,10 +354,7 @@ pub fn run_gen(pattern_id: &str, output: &Path) -> i32 {
         }
     };
 
-    if let Some(parent) = output.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    match std::fs::write(output, pattern.template) {
+    match crate::output::write_new(output, pattern.template.as_bytes()) {
         Ok(_) => {
             println!("Generated: {}", output.display());
             println!("Pattern: {} ({})", pattern.id, pattern.name);
@@ -383,25 +398,43 @@ pub fn run_gen_with_slots(pattern_id: &str, slots_json: &str, output: &Path) -> 
         }
     }
 
-    // Fill slots in template
+    // Reject ignored bindings and code fragments before any output is created.
+    for (key, value) in &slots {
+        if !pattern.slots.contains(&key.as_str()) {
+            eprintln!("ERROR: unknown slot '{key}'.");
+            return 2;
+        }
+        if !pattern.template.contains(&format!("{{{key}}}")) {
+            eprintln!("ERROR: slot '{key}' is not implemented by this scaffold.");
+            return 2;
+        }
+        let valid = !value.contains(['\n', '\r'])
+            && if key.ends_with("_type") {
+                crate::codegen::supported_type(value)
+            } else {
+                crate::codegen::identifier(value)
+            };
+        if !valid {
+            eprintln!("ERROR: invalid or unsupported value for slot '{key}'.");
+            return 2;
+        }
+    }
+    for slot in pattern.slots {
+        if pattern.template.contains(&format!("{{{slot}}}")) && !slots.contains_key(*slot) {
+            eprintln!(
+                "ERROR: used slot '{slot}' requires a binding. Omit --slots to export an unbound scaffold."
+            );
+            return 2;
+        }
+    }
+
     let mut code = pattern.template.to_owned();
     for (key, value) in &slots {
         let placeholder = format!("{{{}}}", key);
         code = code.replace(&placeholder, value);
     }
 
-    // Report unfilled optional slots
-    for slot in pattern.slots {
-        let placeholder = format!("{{{}}}", slot);
-        if code.contains(&placeholder) {
-            eprintln!("WARNING: optional slot '{}' not provided.", slot);
-        }
-    }
-
-    if let Some(parent) = output.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    match std::fs::write(output, code) {
+    match crate::output::write_new(output, code.as_bytes()) {
         Ok(_) => {
             println!("Generated: {}", output.display());
             println!("Pattern: {} ({})", pattern.id, pattern.name);

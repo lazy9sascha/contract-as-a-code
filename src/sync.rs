@@ -2,8 +2,8 @@ use std::fs;
 use std::path::Path;
 use std::time::Duration;
 
-/// Bidirectional sync: regenerate code and docs from a schema.
-/// If --watch is set, poll for changes and regenerate.
+/// Regenerate artifacts from one authoritative schema. This is not reverse sync.
+/// Existing outputs are rejected. Watch only updates files created by this invocation.
 pub fn run_sync(
     input: &Path,
     output_code: Option<&Path>,
@@ -11,72 +11,123 @@ pub fn run_sync(
     watch: bool,
     interval: u64,
 ) -> i32 {
-    let mut last_mtime = file_mtime(input);
-
+    if output_code.is_none() && output_docs.is_none() {
+        eprintln!("ERROR: at least one of --code or --docs is required");
+        return 2;
+    }
+    if interval == 0 {
+        eprintln!("ERROR: --interval must be greater than zero");
+        return 2;
+    }
+    let outputs: Vec<&Path> = [output_code, output_docs].into_iter().flatten().collect();
+    let mut keys = std::collections::HashSet::new();
+    for output in &outputs {
+        let key = match crate::output::destination_key(output) {
+            Ok(key) => key,
+            Err(e) => {
+                eprintln!("ERROR: {e}");
+                return 2;
+            }
+        };
+        if keys
+            .iter()
+            .any(|other: &std::path::PathBuf| key.starts_with(other) || other.starts_with(&key))
+        {
+            eprintln!("ERROR: outputs must be distinct files, not ancestors of one another");
+            return 2;
+        }
+        keys.insert(key);
+        if let Err(e) = crate::output::require_absent(output) {
+            eprintln!("ERROR: {e}");
+            return 2;
+        }
+    }
+    let mut previous: Vec<Vec<u8>> = Vec::new();
     loop {
-        // Read schema
         let content = match fs::read_to_string(input) {
             Ok(c) => c,
             Err(e) => {
-                eprintln!("ERROR: cannot read {}: {}", input.display(), e);
+                eprintln!("ERROR: cannot read {}: {e}", input.display());
                 return 2;
             }
         };
         let schema = match crate::codegen::parse_json(&content) {
             Ok(s) => s,
             Err(e) => {
-                eprintln!("ERROR: {}", e);
+                eprintln!("ERROR: {e}");
                 return 1;
             }
         };
-
-        // Generate code
-        if let Some(out) = output_code {
-            let code = crate::codegen::generate_rust_trait(&schema);
-            if let Some(parent) = out.parent() {
-                let _ = fs::create_dir_all(parent);
+        // Validate before any output is published, including docs-only syncs.
+        if let Err(e) = crate::codegen::validate_schema(&schema) {
+            eprintln!("ERROR: {e}");
+            return 1;
+        }
+        let code = match crate::codegen::generate_rust_trait(&schema) {
+            Ok(code) => code,
+            Err(e) => {
+                eprintln!("ERROR: {e}");
+                return 1;
             }
-            if let Err(e) = fs::write(out, &code) {
-                eprintln!("ERROR: cannot write {}: {}", out.display(), e);
+        };
+        let mut generated = Vec::new();
+        if output_code.is_some() {
+            generated.push(code.into_bytes());
+        }
+        if output_docs.is_some() {
+            match crate::codegen::generate_markdown(&schema) {
+                Ok(markdown) => generated.push(markdown.into_bytes()),
+                Err(e) => {
+                    eprintln!("ERROR: {e}");
+                    return 1;
+                }
+            }
+        }
+        // Preflight the whole output set before changing any member.
+        for (index, output) in outputs.iter().enumerate() {
+            if previous.is_empty() {
+                if let Err(e) = crate::output::require_absent(output) {
+                    eprintln!("ERROR: {e}");
+                    return 2;
+                }
+            } else {
+                let unchanged = fs::symlink_metadata(output).is_ok_and(|m| m.file_type().is_file())
+                    && fs::read(output).is_ok_and(|bytes| bytes == previous[index]);
+                if !unchanged {
+                    eprintln!(
+                        "ERROR: output changed outside this sync session: {}",
+                        output.display()
+                    );
+                    return 2;
+                }
+            }
+        }
+        for (index, output) in outputs.iter().enumerate() {
+            let result = if previous.is_empty() {
+                crate::output::write_new(output, &generated[index])
+            } else {
+                crate::output::replace_owned(output, &previous[index], &generated[index])
+            };
+            if let Err(e) = result {
+                eprintln!(
+                    "ERROR: {e}. Earlier outputs in this operation may already be published."
+                );
                 return 2;
             }
-            println!("Synced code: {}", out.display());
+            println!("Synced: {}", output.display());
         }
-
-        // Generate docs
-        if let Some(out) = output_docs {
-            let md = crate::codegen::generate_markdown(&schema);
-            if let Some(parent) = out.parent() {
-                let _ = fs::create_dir_all(parent);
-            }
-            if let Err(e) = fs::write(out, &md) {
-                eprintln!("ERROR: cannot write {}: {}", out.display(), e);
-                return 2;
-            }
-            println!("Synced docs: {}", out.display());
-        }
-
+        previous = generated;
         if !watch {
-            println!("Sync complete.");
+            println!("Sync complete (schema to outputs only).");
             return 0;
         }
-
-        // Watch mode: poll for changes
-        println!("Watching for changes (Ctrl+C to stop)...");
+        println!("Watching for schema changes (Ctrl+C to stop)...");
         loop {
             std::thread::sleep(Duration::from_secs(interval));
-            let current = file_mtime(input);
-            if current != last_mtime {
-                last_mtime = current;
-                println!("\n--- file changed, re-syncing ---");
-                break;
+            match fs::read_to_string(input) {
+                Ok(current) if current == content => {}
+                _ => break,
             }
         }
     }
-}
-
-fn file_mtime(path: &Path) -> std::time::SystemTime {
-    fs::metadata(path)
-        .and_then(|m| m.modified())
-        .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
 }

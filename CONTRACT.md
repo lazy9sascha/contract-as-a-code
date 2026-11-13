@@ -150,10 +150,12 @@ CAAC-043 | The author must split a size-XL contract into multiple files by modul
 
 Acceptance establishes a reviewed implementation target. It does not establish exhaustive correctness or legal enforceability.
 
-## Contract cases
+## Case status (non-normative)
 
 These cases test CAAC's own rules. They are expected results derived from the
 contract. They are not records of executed tests.
+
+## Contract cases
 
 | Case | Input | Expected result | Clauses |
 | --- | --- | --- | --- |
