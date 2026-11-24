@@ -12,7 +12,7 @@ publication: "review-required"
 
 | Version | What the user gets | Status |
 | --- | --- | --- |
-| [0.10.0 Contract drafts](#0100-contract-drafts) | A project becomes a reviewable contract with sources and open questions. | In development |
+| [0.10.0 Contract drafts](#0100-contract-drafts) | A project becomes a reviewable contract with sources and open questions. | Verified scope complete |
 | [0.11.0 Execution evidence](#0110-execution-evidence) | Contract lint and an execution harness enforce selected CAAC rules in CI and report the evidence for each result. | Planned after 0.10.0 |
 
 [Backlog by milestone](#backlog)
@@ -30,6 +30,23 @@ Given a project and scope, the authoring assistant produces `candidate.json`, a 
 **Done when** an independent reviewer can reproduce a draft from a pinned project, and the XS–XL fixtures preserve its meaning and reject broken references and lossy splits.
 
 **2026-11-24 milestone audit · partially satisfied.** Hermes reported 316 passing tests, bounded pinned-project runs for itoa and itsdangerous, and lossless Echo S → XS → S and shared retry M → XL → M round trips. The exercised broken references and lossy placements failed before publication. A subsequent independent replay reproduced a pending M draft for a pinned Redis GET and optionless SET scope spanning command dispatch, string handling and storage. Source review confirmed the corrected readback and transaction boundaries. Redis behavior remains unexecuted. A corrected function fixture subsequently passed independent source review and CLI replay through XS, S, M, L, XL, a module move and restoration to XS. Its original clause and open decision were preserved, all six negative controls were rejected, and the full suite passed 317 tests. The owner selected typed expression-only XS for 0.10.0 under CAAC-03. Grok verified the schema and Hermes reproduced the CLI results. The expression package survived an XS → flat S → XS round trip with identical candidate and review bytes. All 324 tests passed. The wider CAAC-16 evidence criteria remain open. On November 24 the owner approved the reviewed hierarchy and numbering rules in method revision 0.1.4 (SHA-256 `7d3a29551daaed3d73460900711571f716b8a03b2fa72cf452112966395b7108`) and adopted `caac candidate apply` as the official typed draft entry point. CAAC-31, CAAC-04 and CAAC-33 track shared-obligation rules, attachment policy and language profiles. CAAC-02 and CAAC-09 track further completeness and reference-validation expectations.
+
+### Closure review
+
+On 2026-11-25 the owner approved 0.10.0 for independently reproducible draft generation, meaning-preserving XS–XL resizing and rejection of broken references and lossy splits. The tickets below remain open for the broader requirements.
+
+CAAC-07 is closed. The owner adopted `caac candidate apply` as the typed entry point. On November 24, 47 focused tests passed. Direct apply and verify succeeded at each size from XS through XL. The complete semantic object and reference bindings survived each change of size. Five invalid inputs exited 2 before writing output.
+
+CAAC-01 distinguishes the scope of the product from the acceptance of a generated contract. Echo, shared-retry, Redis and the expression example retain pending authority. They can serve as draft-generation fixtures in this state. Using one as an implementation target requires acceptance of its exact revision.
+
+| Open work | Verified scope and remaining decision |
+| --- | --- |
+| CAAC-02 and CAAC-16 | The Echo fixture preserved its declared content across all sizes. Separately typed evidence requirements and checks against an external inventory of mandatory obligations are open. |
+| CAAC-09 | The tested packages reject broken, duplicate and wrong-type references. Authorization, stale target revisions, ambiguous namespaces and forbidden cycles remain open for the wider resolver. |
+| CAAC-04 and CAAC-31 | The CLI carries typed attachments, sentence exceptions and shared clause references. Adoption of the attachment policy and the shared-obligation rules remains open. |
+| CAAC-17 | Independent reviewers reproduced the corrected Redis draft. It covers direct execution outside MULTI and retains open integer and pointer assumptions. |
+
+The owner approved the reviewed hierarchy and numbering in method revision 0.1.4. Hermes verified that subsequent edits updated the implementation status and review record. The normative clauses and mapped cases match the approved revision. Expression exceptions remain outside the reviewed XS declaration feature. Runtime execution and evidence freshness are scheduled for 0.11.0.
 
 ## 0.11.0 Execution evidence
 
@@ -52,11 +69,11 @@ Current candidate traces cover declared relationships and document locations. Th
 
 Ticket IDs refer to files in `.dev/tickets/` in a development checkout. Assign individual items to a release during planning. Before writing general-purpose tooling, try a maintained library on a passing case and a failing case.
 
-### 0.10.0 remaining work
+### Draft-generation follow-up
 
 | Deliverable | Tickets |
 | --- | --- |
-| Finish auditing the XS–XL hierarchy and file boundaries, verify lossless resizing, and specify how the authoritative draft supplies its size to rendering and partitioning. [Scaffold size input](quickstart.md#sizing-limit) is available for XS, S and M. | CAAC-02, CAAC-03, CAAC-07, CAAC-36–39 |
+| Extend the verified resize fixtures to cover separately typed evidence requirements and an external inventory of mandatory obligations. | CAAC-02, CAAC-16 |
 | Review the experimental attachment and sentence-part semantics before adoption. | CAAC-04, CAAC-05, CAAC-06, CAAC-09, CAAC-16, CAAC-32 |
 | Declare which source languages each analyzer supports. Turn gaps into review questions and identify who owns each shared obligation. | CAAC-10, CAAC-11, CAAC-31, CAAC-33 |
 | Turn resolved decisions into a draft, carry reviewed edits back to the schema and independently check the workflow on public projects. | CAAC-01, CAAC-08, CAAC-12, CAAC-17 |
