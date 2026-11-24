@@ -1,7 +1,7 @@
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::fs;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Seek, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
 use std::thread;
@@ -18,11 +18,11 @@ fn state_path(path: &Path) -> PathBuf {
     PathBuf::from(format!("{}.caac-state.json", path.display()))
 }
 
-fn spawn(args: &[&str], path: &Path) -> Child {
+fn spawn(args: &[&str], path: &Path, stdin: Stdio) -> Child {
     command()
         .args(args)
         .arg(path)
-        .stdin(Stdio::piped())
+        .stdin(stdin)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -44,14 +44,10 @@ fn finish(mut child: Child) -> Output {
 }
 
 fn answer(args: &[&str], path: &Path, text: &str) -> Output {
-    let mut child = spawn(args, path);
-    child
-        .stdin
-        .as_mut()
-        .unwrap()
-        .write_all(text.as_bytes())
-        .unwrap();
-    finish(child)
+    let mut input = tempfile::tempfile().unwrap();
+    input.write_all(text.as_bytes()).unwrap();
+    input.rewind().unwrap();
+    finish(spawn(args, path, Stdio::from(input)))
 }
 
 fn wait_for(mut predicate: impl FnMut() -> bool) {
@@ -118,7 +114,7 @@ fn interrupted_interview_keeps_recorded_answer_and_resume_asks_only_remaining() 
     let dir = tempdir().unwrap();
     let path = dir.path().join("contract.md");
     fs::write(&path, "OPEN: First?\nOPEN: Second?\n").unwrap();
-    let mut child = spawn(&["interview"], &path);
+    let mut child = spawn(&["interview"], &path, Stdio::piped());
     child.stdin.as_mut().unwrap().write_all(b"one\n").unwrap();
     wait_for(|| fs::read_to_string(&path).unwrap().contains("DECISION: one"));
     child.kill().unwrap();
@@ -173,7 +169,7 @@ fn concurrent_contract_edits_are_not_overwritten() {
     let dir = tempdir().unwrap();
     let path = dir.path().join("contract.md");
     fs::write(&path, "OPEN: First?\n").unwrap();
-    let mut child = spawn(&["interview"], &path);
+    let mut child = spawn(&["interview"], &path, Stdio::piped());
     // A checkpoint exists before preparation finishes. Wait for the question,
     // otherwise an early conflict can correctly exit before our stdin write.
     let stdout = child.stdout.take().unwrap();
