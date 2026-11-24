@@ -234,7 +234,7 @@ Acceptance establishes a reviewed implementation target. It does not establish e
 
 ## Sizing implementation status (non-normative)
 
-The experimental typed candidate CLI supports a one-operation XS article, S articles, M and L hierarchies, and XL module files. It supports subitems from S through XL. Expression-only XS and automatic scope selection remain open. See [candidate authoring](docs/candidate-authoring.md) for supported shapes and CLI limits.
+The typed candidate CLI supports an XS article with one operation or one typed expression. An expression case binds directly to its expression and declares the expected result. Flat S also supports expression targets. S through XL support subitems, M and L support upper-level hierarchies, and XL writes one review file per module. The author selects the scope and size. See [candidate authoring](docs/candidate-authoring.md) for supported shapes and CLI limits.
 
 ## Case status (non-normative)
 
@@ -277,15 +277,15 @@ contract. They are not records of executed tests.
 
 ## Review records
 
-Grok reviewed draft 0.1.3 and reported three findings. Hermes ran the first-pass CLI checks on that worktree. [CAAC-36](.dev/tickets/CAAC-36.md) records both audits. The corrected draft awaits re-review and exact-revision owner acceptance.
+Grok re-reviewed the hierarchy and placement rules after the three findings on draft 0.1.3. Hermes reproduced the CLI checks for the corrected hierarchy. On 2026-11-24 the owner accepted the hierarchy, file boundaries and numbering in the exact 0.1.4 document with SHA-256 `7d3a29551daaed3d73460900711571f716b8a03b2fa72cf452112966395b7108`. The implementation status and review record below describe subsequent verification.
 
 | Field | Value |
 | --- | --- |
 | Contract revision | 0.1.4 |
-| Reviewer | Pending for this revision |
-| Cases checked in independent review | 0 of 29 |
-| Findings | Draft includes corrections for the three findings on 0.1.3. Re-review pending. |
-| Remaining limits | Semantic review and exact-revision owner acceptance pending. |
+| Reviewers | Grok (rules and case mapping), Hermes (CLI replay) |
+| Cases checked in independent review | CAAC-36 re-review covered the three findings on descendant articles, preserved semantics and unique placement. |
+| Findings | Grok confirmed all three corrections within the reviewed scope. |
+| Remaining limits | The approval covers the reviewed sizing rules. Runtime execution evidence and acceptance of generated candidates are separate. |
 | Reviewer must differ from designer | Yes (CAAC-030) |
 
 ## First acceptance exercise
