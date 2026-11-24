@@ -90,6 +90,21 @@ fn visible_precheck_schema(
 /// Run the contract completion loop: check → repair → interview → re-check.
 /// Evaluates the pre-review check on each iteration.
 pub fn run_loop(files: &[PathBuf], sources: &[String], max_iterations: u32) -> i32 {
+    run_loop_with_baseline(files, sources, None, max_iterations)
+}
+
+pub fn run_loop_with_baseline(
+    files: &[PathBuf],
+    sources: &[String],
+    baseline: Option<&std::path::Path>,
+    max_iterations: u32,
+) -> i32 {
+    let source_paths: Vec<_> = sources.iter().map(PathBuf::from).collect();
+    // Fail invalid evidence before any interactive edits, even if no OPEN remains.
+    if let Err(error) = crate::source_intake::load_evidence(&source_paths, baseline) {
+        eprintln!("ERROR: {}", crate::suggest::safe_json(&error));
+        return 2;
+    }
     if max_iterations == 0 {
         eprintln!("ERROR: --max-iterations must be greater than zero.");
         return 2;
@@ -104,7 +119,7 @@ pub fn run_loop(files: &[PathBuf], sources: &[String], max_iterations: u32) -> i
         let diagnostics = match crate::checker::check(files) {
             Ok(d) => d,
             Err(e) => {
-                eprintln!("ERROR: {}", e);
+                eprintln!("ERROR: {}", crate::suggest::safe_json(&e));
                 return 2;
             }
         };
@@ -114,7 +129,13 @@ pub fn run_loop(files: &[PathBuf], sources: &[String], max_iterations: u32) -> i
         } else {
             println!("FAIL: {} finding(s):", diagnostics.len());
             for d in &diagnostics {
-                println!("  {}:{}: {}: {}", d.path, d.line, d.code, d.message);
+                println!(
+                    "  {}:{}: {}: {}",
+                    crate::suggest::safe_json(&d.path),
+                    d.line,
+                    d.code,
+                    crate::suggest::safe_json(&d.message)
+                );
             }
         }
 
@@ -132,7 +153,7 @@ pub fn run_loop(files: &[PathBuf], sources: &[String], max_iterations: u32) -> i
         } else {
             println!("\nPRE-REVIEW CHECK: NOT PASSED");
             for issue in &issues {
-                println!("  - {}", issue);
+                println!("  - {}", crate::suggest::safe_json(issue));
             }
         }
 
@@ -145,12 +166,6 @@ pub fn run_loop(files: &[PathBuf], sources: &[String], max_iterations: u32) -> i
         let before: Vec<_> = files.iter().map(fs::read).collect();
         let has_open = diagnostics.iter().any(|d| d.code == "open-decision");
         if has_open {
-            let source_contents: Vec<String> = sources
-                .iter()
-                .filter_map(|p| fs::read_to_string(p).ok())
-                .collect();
-            let source_refs: Vec<&str> = source_contents.iter().map(|s| s.as_str()).collect();
-
             for file in files {
                 let path = file.display().to_string();
                 let decisions: Vec<_> = diagnostics
@@ -158,17 +173,20 @@ pub fn run_loop(files: &[PathBuf], sources: &[String], max_iterations: u32) -> i
                     .filter(|d| d.code == "open-decision" && d.path == path)
                     .collect();
                 if !decisions.is_empty() {
-                    if !source_refs.is_empty() {
-                        println!("\nSuggestions for {}:", file.display());
-                        for diagnostic in &decisions {
-                            let decision = diagnostic.message.as_str();
-                            if let Some(suggestion) =
-                                crate::suggest::suggest_for_decision(decision, &source_refs)
-                            {
-                                println!("  Q: {}", decision);
-                                println!("  Suggested: {}", suggestion);
-                            }
+                    let context = match crate::source_intake::load_evidence(&source_paths, baseline)
+                    {
+                        Ok(context) => context,
+                        Err(error) => {
+                            eprintln!("ERROR: {}", crate::suggest::safe_json(&error));
+                            return 2;
                         }
+                    };
+                    if let Err(error) = crate::suggest::emit_batch(
+                        &context,
+                        decisions.iter().map(|d| d.message.as_str()),
+                    ) {
+                        eprintln!("ERROR: {}", crate::suggest::safe_json(&error));
+                        return 2;
                     }
                     let result = crate::interview::run_interview(file, false);
                     if result != 0 {

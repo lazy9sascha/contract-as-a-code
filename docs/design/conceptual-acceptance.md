@@ -146,7 +146,7 @@ The following register preserves decision IDs and owners. Proposed designs remai
 | Decisions | Proposed disposition | Authority class and remaining consequence |
 | --- | --- | --- |
 | D01–D02 | Contract-completion product above implementation; this concept/method/design responsibility map; conceptual versus implementation release separation. | Product-boundary acceptance. Preserve B05–B09/B24–B27. No return to a checker-only product. |
-| D03–D04 | Combined revisioned semantic package, explicit constant/runtime-source distinction, no conflicting representation precedence, stable identity with lineage. | Technical design proposal, reviewed through model and integration cases. |
+| D03–D04 | [Canonical schema authority](contract-model.md#d03-canonical-schema-and-derived-documents), paired-field consistency, explicit constant/runtime-source distinction, stable identity with lineage. | Schema authority is selected. Encoding, detailed lineage, and exact baseline acceptance remain pending through model and integration cases. |
 | D05 | Thirty-four prepared counterparts with explicit discovery and unsupported gaps. | Baseline scope acceptance. Preserve the broad all-pattern direction beyond this finite initial inventory. |
 | D06–D07 | Typed relations, exact activation/phase/port semantics, explicit continuation, conjunctive inheritance, behavioral substitution. | Technical semantics proposal. No universal proof or silent depth truncation. |
 | D08 | Accept only the explicitly scoped conceptual profile mappings and gap outcomes in T05. Rust 1.85 remains source-pending; real host/runtime support remains unavailable. | Coverage/scope acceptance. No full-language or supported-Rust claim. Additional selected capabilities require evidence. |

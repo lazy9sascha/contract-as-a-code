@@ -285,9 +285,47 @@ MODEL-012 | The author must express implementation discretion as a bounded Choic
 
 MODEL-013 | The checker must reject NotApplicable when requiredness is true or unresolved.
 
-## D03: Canonical representation proposal
+## D03: Canonical schema and derived documents
 
-Decision owner: repository owner. State: proposed, unresolved. Drafting and review are authorized. Acceptance is not recorded.
+Direction: the owner selected the schema as the canonical source for obligations and relationships during the current audit.
+This selects representation authority, not acceptance of this exact draft, its encoding, or the integrated controller baseline.
+The current Rust schema does not implement this full model.
+
+Direction sources in the owner conversation: `Sentinel_028005b1ab1c81918f9843e969779713` confirms meaning/location separation,
+`Sentinel_8a5f1120b6c48191afec885e87f96c13` identifies the schema,
+and `Sentinel_c79206260cd08191b02602dd2092f8c5` asks for lookup through schema IDs.
+These sources establish direction only. They do not accept the full product contract.
+
+The schema package contains typed entities, their controlled sentences, and explicit relationships at exact revisions.
+A controlled sentence is a field of its schema entity, not a second authoritative Markdown document.
+Legal-style documents are derived views. Their positions and display numbers do not replace stable entity IDs.
+A document move preserves identity. A changed obligation requires revision and evidence-impact review.
+
+### Document-to-schema change workflow
+
+1. Record the imported document, its digest, and its claimed source package revision.
+2. Compare it with that exact schema revision. Preserve unsupported comparisons as unresolved findings.
+3. Propose explicit entity changes with source locations. Do not change the accepted package during import.
+4. Review changes to meaning, relationships, cases, and affected evidence on a candidate revision.
+5. Obtain any required owner acceptance for that exact candidate and declared scope before activation.
+
+A contradictory view is not an instruction to replace the schema. It creates a located discrepancy.
+A requirement change remains a proposal until its authority and revision-specific acceptance requirements are satisfied.
+Unchanged rendering alone neither supplies acceptance nor proves semantic equivalence.
+
+### Distinct acceptance targets
+
+Product direction records identify the owner source and the selected scope. They are not baseline acceptance records.
+The integrated product baseline and each authored contract revision require their own acceptance evidence.
+Each acceptance record identifies its target, exact revision, authorized owner source, independent reviewer, checked cases, findings, and limits.
+Missing records, stale revisions, unresolved required findings, or conflicting views cannot establish acceptance.
+An independent review record cannot substitute for owner acceptance, and owner acceptance cannot substitute for required review evidence.
+
+RUSTCORE-005 still gates integrated controller implementation on the T14 baseline.
+This direction permits model and bounded verification work. It does not record T14 acceptance or authorize live harness actions.
+The remaining gate is exact-baseline review and owner acceptance, not another vote on schema authority.
+
+The following candidate comparison retains the design rationale. The schema package contains the paired fields described in its final row.
 
 | Candidate | Preserved strength | Failure exposed by cases | Disposition |
 | --- | --- | --- | --- |
@@ -299,7 +337,7 @@ The combined package has one canonical location per entity. It contains the cont
 
 Neither half overrides the other. Their disagreement invalidates agreement for that revision. The resolver supplies missing meaning before acceptance.
 
-Generated prose, diagrams, summaries, schemas, code, and tool indexes are derived views unless explicitly included in the canonical package.
+Generated prose, diagrams, exported schemas, code, and tool indexes are derived views of the canonical schema package.
 
 A conversion records `source:Ref<Package>[1]`, `converter:Name[1]`, `version:ID[1]`, `target:Artifact[1]`, `mapping:Map<Name,Ref<Clause>>[1]`, `preserved:Set<Ref<Entity>>[0..n]`, `losses:List<Text>[0..n]`, and `limits:Text[1]`.
 
@@ -506,7 +544,7 @@ The downstream tasks define their own semantics. This model does not supply a pa
 | --- | --- | --- |
 | T01 D01 and accepted product boundary | Repository owner | Confirm scope and controller authority. Recheck affected model assumptions. |
 | T01 D02 and document authority | Repository owner | Reconcile the method draft and proposed canonical document responsibilities. |
-| D03 combined semantic package | Repository owner | Select canonical representation after reviewing MC03, MC11, and MC13. |
+| D03 canonical schema details | Repository owner | Schema authority is selected. Exact encoding and baseline acceptance remain pending after MC03, MC11, and MC13. |
 | D04 identity and lineage policy | Repository owner | Accept split, merge, retirement, and evidence-carry rules after MC02, MC14, and MC15. |
 | T03/T04 definition interfaces | Assigned downstream designers | Reconcile prepared definition fields and relation semantics without silently changing these references. |
 | T06/T11 checking and completion methods | Assigned downstream designers | Specify exact evidence production, determinism, and controller gate behavior. |

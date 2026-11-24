@@ -3,10 +3,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-2024-orange.svg)](https://www.rust-lang.org/)
 
-**The contract is the code. The code is the contract.**
+CAAC is an experimental contract-authoring toolkit. A JSON schema generates
+Rust trait scaffolds and Markdown. Unchanged generated artifacts retain the
+complete schema in versioned metadata; they do not enforce its obligations.
 
-CAAC is a bidirectional framework: a contract schema generates code, and code
-generates a contract. They are the same artifact in two forms.
+## Roadmap
+
+- **0.10.0 · In development.** Generate a reviewable contract draft from a selected project. [Scope and remaining work](docs/ROADMAP.md#0100-contract-drafts)
+- **0.11.0 · Planned after 0.10.0.** Enforce selected CAAC rules with contract lint and an execution harness. Trace a result to its clause, code and test revisions and rerun it when a bound revision changes. [Example and completion criteria](docs/ROADMAP.md#0110-execution-evidence)
+
+[Browse the backlog by milestone](docs/ROADMAP.md#backlog)
 
 ## Table of contents
 
@@ -16,24 +22,25 @@ generates a contract. They are the same artifact in two forms.
 4. [Quickstart](#quickstart)
 5. [Run](#run)
 6. [Checks](#checks)
-7. [Roadmap](#roadmap)
-8. [Contributing](#contributing)
-9. [License](#license)
+7. [Contributing](#contributing)
+8. [License](#license)
 
 ## Project description
 
 With CAAC you can write contracts as programs with explicit programming
 semantics. A contract schema defines operations, clauses, and cases. From that
-schema, CAAC generates Rust traits and Markdown contracts. From existing Rust
-code, CAAC extracts a contract schema. The two directions are reversible.
+schema, CAAC generates Rust traits and Markdown contracts. Extraction recovers
+the schema only from unchanged CAAC-generated Rust. Arbitrary or legacy Rust
+is rejected rather than silently producing an incomplete contract.
 
 CAAC does not write contracts for you. It checks syntax, generates scaffolds,
 guides you through open decisions, and converts between contract and code. The
 contract content comes from you or your LLM.
 
-CAAC combines prepared programming patterns, an LLM skill, and tools. The
-controller retains decisions and evidence. A completed contract constrains
-downstream implementation work.
+CAAC combines prepared programming patterns, an LLM skill, and local tools.
+The interview records decisions. The harness performs a pre-review check, not
+semantic completion or owner acceptance. Downstream enforcement remains a
+provisional design, not an implemented security boundary.
 
 ## Who this project is for
 
@@ -73,8 +80,8 @@ Generate code from a contract schema:
 ```sh
 cargo run -- gen schema.json --output src/trait.rs
 cargo run -- md schema.json --output docs/contract.md
-cargo run -- parse contract.md --output schema.json
-cargo run -- extract src/trait.rs --output schema.json
+cargo run -- parse docs/contract.md --output parsed-schema.json
+cargo run -- extract src/trait.rs --output extracted-schema.json
 ```
 
 Interview and repair loop:
@@ -94,8 +101,27 @@ cargo run -- pattern list
 cargo run -- pattern gen FLOW-SEQUENCE --output src/flow.rs
 ```
 
-Repeat `--source` for additional files. Existing output paths cause rejection.
+Repeat `--source` for additional files. Existing output paths, including
+symlinks, cause rejection. Generation never replaces an existing schema or file.
 Generated drafts contain unresolved decisions and are expected to fail `check`.
+
+Conversion boundaries:
+- Preserve the original JSON schema as the source of truth. Edit it and generate
+  new artifacts instead of editing generated Rust or Markdown in place.
+- Metadata-backed extraction verifies the complete rendered artifact. Edited,
+  unsupported, or unmarked Rust fails instead of losing requirements.
+- Handwritten Markdown parsing supports declared clauses across sections and
+  excludes fences, HTML comments, and non-normative sections. It is not a
+  natural-language compiler. Unrepresented prose is not recovered as semantics.
+- Rust generation accepts a restricted signature grammar. Unsupported syntax,
+  ambiguous merges, and unknown schema fields produce errors.
+- `sync schema.json --code new.rs --docs new.md` requires absent destinations.
+  `--watch` updates only outputs created by that invocation and stops when it
+  detects external output edits. This detects edits between polls; it is not a
+  filesystem lock against simultaneous writers. Multiple outputs are not one
+  filesystem transaction; an I/O failure can leave earlier outputs published.
+- The pre-review check does not validate execution results, independent review,
+  owner acceptance, or revision-bound completion evidence.
 
 ## Checks
 
@@ -105,16 +131,13 @@ cargo test
 cargo clippy --all-targets -- -D warnings
 ```
 
-Integration tests exercise the executable, temporary source baselines, malformed
-contracts, and batch behavior. A separate arithmetic oracle checks selected
-division inputs.
+Integration tests exercise authoring, checking, lossless generated-artifact
+round trips, malformed conversion inputs, output safety, interview recovery,
+and harness progress. Generated Rust fixtures are compiled. A separate
+arithmetic oracle checks selected division inputs.
 
 These checks establish only their tested behavior. They do not establish
 semantic completeness or conceptual 0.1.0 acceptance.
-
-## Roadmap
-
-See [ROADMAP.md](docs/ROADMAP.md).
 
 ## Contributing
 

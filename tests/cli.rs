@@ -89,6 +89,7 @@ fn all_authoring_modes_create_reviewable_drafts_without_running_sources() {
         let contract = destination.join("CONTRACT.md");
         let text = fs::read_to_string(&contract).expect("read generated contract");
         assert!(text.contains("Owner acceptance: pending"));
+        assert!(!text.contains("Proposed scope size:"));
         let checked = run_check(std::slice::from_ref(&contract));
         assert_eq!(checked.status.code(), Some(1));
         assert_code(&json_output(&checked), "open-decision");
@@ -119,6 +120,62 @@ fn all_authoring_modes_create_reviewable_drafts_without_running_sources() {
         }
 
         assert_eq!(fs::read(&source).unwrap(), original);
+    }
+}
+
+#[test]
+fn authoring_records_explicit_scope_size_in_each_markdown_scaffold() {
+    let temporary = tempdir().unwrap();
+    let source = write_file(temporary.path(), "selected.rs", b"fn run() {}\n");
+    for (mode, args, size) in [
+        ("scratch", &["--size", "XS"][..], "XS"),
+        ("plugin", &["--size=S"][..], "S"),
+        ("migration", &["--size", "M"][..], "M"),
+    ] {
+        let destination = temporary.path().join(mode);
+        let mut command = caac();
+        command.arg(mode).arg(&destination).args(["--title", "Run"]);
+        if mode != "scratch" {
+            command.arg("--source").arg(&source);
+        }
+        let result = command.args(args).output().unwrap();
+        assert_eq!(result.status.code(), Some(0), "{result:?}");
+        let draft = fs::read_to_string(destination.join("CONTRACT.md")).unwrap();
+        assert!(draft.contains(&format!("\nProposed scope size: {size}.\n")));
+        assert!(draft.contains("Owner acceptance: pending."));
+        assert_eq!(
+            destination.join("baseline.json").exists(),
+            mode != "scratch"
+        );
+    }
+}
+
+#[test]
+fn authoring_rejects_invalid_and_unsupported_sizes_before_creating_output() {
+    let temporary = tempdir().unwrap();
+    let source = write_file(temporary.path(), "selected.rs", b"fn run() {}\n");
+    let parent = temporary.path().join("missing-parent");
+    let destination = parent.join("draft");
+    for mode in ["scratch", "plugin", "migration"] {
+        for (args, diagnostic) in [
+            (&["--size", "L"][..], "Unsupported --size value"),
+            (&["--size=XL"][..], "Unsupported --size value"),
+            (&["--size", "unknown"][..], "Unsupported --size value"),
+            (&["--size"][..], "--size requires a value"),
+            (&["--size="][..], "--size requires a value"),
+            (&["--size=S", "--size", "M"][..], "Specify --size only once"),
+        ] {
+            let mut command = caac();
+            command.arg(mode).arg(&destination).args(["--title", "Run"]);
+            if mode != "scratch" {
+                command.arg("--source").arg(&source);
+            }
+            let result = command.args(args).output().unwrap();
+            assert_eq!(result.status.code(), Some(2), "{result:?}");
+            assert!(String::from_utf8_lossy(&result.stderr).contains(diagnostic));
+            assert!(result.stdout.is_empty());
+            assert!(!parent.exists());
+        }
     }
 }
 

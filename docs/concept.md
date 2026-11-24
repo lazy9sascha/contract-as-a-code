@@ -186,7 +186,8 @@ Decision owner: repository owner. State: proposed, unresolved. This draft change
 
 Proposed concept location: `docs/concept.md`. Product roles and the conceptual boundary belong here after acceptance.
 Method obligations stay in `CONTRACT.md`. Detailed interfaces belong in their named task deliverables.
-T02 decides the canonical contract representation. This document does not decide precedence between prose and structured records.
+The owner selected schema authority during the current audit. [T02 D03](design/contract-model.md#d03-canonical-schema-and-derived-documents) defines the boundary.
+Legal-style documents are views, and document edits propose schema changes. This direction does not accept the entire conceptual baseline.
 
 Proposed conflict rule: current owner requirements control product direction. Exact accepted revisions control their declared scope.
 Draft proposals cannot override an accepted obligation. Observed code cannot supply missing owner intent.

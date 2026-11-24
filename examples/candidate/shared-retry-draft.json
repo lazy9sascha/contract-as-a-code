@@ -1,0 +1,112 @@
+{
+  "format": "caac-candidate-v1",
+  "semantic": {
+    "namespace": "synthetic-job-platform",
+    "entities": [
+      {
+        "kind": "definition",
+        "id": "term-priority",
+        "text": "A priority job has the priority input set to true."
+      },
+      {
+        "kind": "clause",
+        "id": "rule-retry-limit",
+        "actor": "Retry policy",
+        "modality": "obligation",
+        "text": "The retry policy returns a retry limit of 3.",
+        "definition_refs": ["term-priority"]
+      },
+      {
+        "kind": "exception",
+        "id": "except-priority",
+        "target": "rule-retry-limit",
+        "applicability": {"kind": "input-equals", "field": "priority", "value": true},
+        "effect": {"kind": "replace-result", "value": 5}
+      },
+      {
+        "kind": "operation",
+        "id": "operation-intake",
+        "name": "intake_retry_limit",
+        "inputs": {"priority": "bool"},
+        "output": "i32",
+        "clause_refs": ["rule-retry-limit"],
+        "exclusions": []
+      },
+      {
+        "kind": "operation",
+        "id": "operation-replay",
+        "name": "replay_retry_limit",
+        "inputs": {"priority": "bool"},
+        "output": "i32",
+        "clause_refs": ["rule-retry-limit"],
+        "exclusions": []
+      },
+      {
+        "kind": "case",
+        "id": "test-intake-standard",
+        "operation": "operation-intake",
+        "input": {"priority": false},
+        "expected": 3,
+        "clause_refs": ["rule-retry-limit"],
+        "exception_refs": []
+      },
+      {
+        "kind": "case",
+        "id": "test-replay-priority",
+        "operation": "operation-replay",
+        "input": {"priority": true},
+        "expected": 5,
+        "clause_refs": ["rule-retry-limit"],
+        "exception_refs": ["except-priority"]
+      }
+    ],
+    "unresolved": [
+      {
+        "id": "decision-policy-owner",
+        "question": "Who can approve changes to the shared retry policy?",
+        "required": true
+      }
+    ]
+  },
+  "presentation": {
+    "size": "M",
+    "nodes": [
+      {
+        "kind": "chapter",
+        "id": "chapter-intake",
+        "title": "Intake",
+        "articles": [
+          {
+            "kind": "article",
+            "id": "article-policy",
+            "title": "Retry policy",
+            "entities": ["term-priority", "rule-retry-limit", "except-priority"]
+          },
+          {
+            "kind": "article",
+            "id": "article-intake",
+            "title": "New jobs",
+            "entities": ["operation-intake", "test-intake-standard"]
+          }
+        ]
+      },
+      {
+        "kind": "chapter",
+        "id": "chapter-replay",
+        "title": "Replay",
+        "articles": [
+          {
+            "kind": "article",
+            "id": "article-replay",
+            "title": "Replayed jobs",
+            "entities": ["operation-replay", "test-replay-priority"]
+          }
+        ]
+      }
+    ]
+  },
+  "authority": {
+    "owner_acceptance": "pending",
+    "implementation_admission": "pending"
+  }
+}

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.0]
+
+- Create a typed contract draft from structured answers with `caac candidate apply`. Verify the generated review, trace clause and case references, and revise a draft while retaining its provenance.
+- Render XS through XL drafts, including typed expression cases in XS and flat S, and write each XL module to its own review file.
+- Collect source observations at pinned revisions and keep unresolved requirements visible for review.
+
 ## [0.9.1] - 2026-11-13
 
 ### Fixed

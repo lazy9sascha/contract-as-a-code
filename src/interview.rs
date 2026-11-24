@@ -39,7 +39,7 @@ fn run(path: &Path, auto: bool, resume: bool) -> i32 {
     match interview(path, auto, resume) {
         Ok(()) => 0,
         Err(error) => {
-            eprintln!("ERROR: {error}");
+            eprintln!("ERROR: {}", crate::suggest::safe_json(&error));
             2
         }
     }
@@ -163,13 +163,16 @@ fn interview(path: &Path, auto: bool, resume: bool) -> Result<(), String> {
         return Err("Contract changed while preparing interview; no answers applied.".into());
     }
     if open_lines.is_empty() {
-        println!("No open decisions found in {}.", path.display());
+        println!(
+            "No open decisions found in {}.",
+            crate::suggest::safe_json(&path.to_string_lossy())
+        );
         return Ok(());
     }
     println!(
         "Found {} open decision(s) in {}.",
         open_lines.len(),
-        path.display()
+        crate::suggest::safe_json(&path.to_string_lossy())
     );
     println!("Answer each question, or type 'skip' to defer.\n");
     let stdin = io::stdin();
@@ -190,7 +193,7 @@ fn interview(path: &Path, auto: bool, resume: bool) -> Result<(), String> {
             "Decision {} of {}: {}",
             index + 1,
             open_lines.len(),
-            question
+            crate::suggest::safe_json(&question)
         );
         let answer = if auto {
             println!("[auto mode: skipping]");

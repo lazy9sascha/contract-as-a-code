@@ -1,6 +1,8 @@
 # Method contract
 
-Status: draft. Scope: authoring and reviewing CAAC contracts. Authority for this draft: this file.
+Revision: 0.1.4. Status: draft.
+
+Scope: authoring and reviewing CAAC contracts. Authority for this draft: this file.
 
 ## Scope
 
@@ -25,6 +27,24 @@ Exclusions: runtime correctness, performance, security, and deployment.
 | Open decision | Missing meaning that prevents a reviewer from determining permitted behavior. |
 | Owner | The person authorized to accept or change contract requirements. |
 | Reviewer | The person who checks clauses and cases against the declared acceptance criteria. |
+| Size profile | A presentation and partitioning policy for the same scope and required semantic content. |
+| Upper level | A grouping level above an article. The order from outermost to innermost is part (편), chapter (장), section (절), subsection (관). |
+| Article (조) | The main unit for placing contract content. |
+| Lower level | A grouping level within an article. The order from outermost to innermost is paragraph (항), item (호), subitem (목). |
+| Direct content | Contract content placed in an article or lower group without an intervening group. |
+| Module | A named division of an XL contract's scope with its own article hierarchy. |
+| Descendant | A node reached by following one or more child links from another node. |
+| Siblings | Nodes that share a parent or occur in the same root list. |
+| Display number | An ordinal assigned to a presentation node from its position in the hierarchy. |
+| Article order | The order of articles in a depth-first traversal of the hierarchy in declared sibling order. For XL, traverse each module in declared module order. |
+| Semantic entity | An identified object in the semantic source, such as a clause, definition, operation, exception, or case. |
+| Semantic identity | The stable package-local ID of a semantic entity or open decision. |
+| Semantic reference | An authored link to a target's semantic identity. |
+| Semantic content | Clauses, definitions, operations, exceptions, cases, evidence requirements, open decisions, other semantic entities, and their semantic references. |
+| Semantic revision | The revision of the semantic content of a package or of an individual entity or open decision. |
+| Primary placement | The location in a review file that presents a semantic entity as authored content. |
+| Entity placement | A reference to a semantic entity for its primary placement. |
+| Review location | The location in a review file that presents an open decision. |
 
 `must` states an obligation. `must not` states a prohibition. `may` states a permission with explicit bounds.
 
@@ -116,7 +136,7 @@ CAAC-028 | The author must preserve supplied source identities and revisions whe
 
 CAAC-029 | The author must distinguish observed implementation behavior from owner-approved requirements.
 
-A contract needs additional files only when their distinct purpose justifies separate maintenance. A fixed file count is not an acceptance criterion.
+A contract needs additional files only when their distinct purpose justifies separate maintenance. File count alone cannot establish completeness.
 
 ## Contract review
 
@@ -140,6 +160,8 @@ CAAC-038 | Review records must identify the contract revision, reviewer, cases, 
 
 CAAC-039 | The reviewer must keep language checks, contract review, and implementation test results separate.
 
+## Contract sizing
+
 CAAC-040 | The author must choose the smallest contract unit that captures the required behavior.
 
 CAAC-041 | The author must use T-shirt sizing (XS, S, M, L, XL) to estimate contract scope before writing.
@@ -148,7 +170,71 @@ CAAC-042 | A size-XS contract must target one function or expression. A size-XL 
 
 CAAC-043 | The author must split a size-XL contract into multiple files by module.
 
+CAAC-044 | The author must preserve canonical clauses, definitions, exceptions, cases, and evidence requirements when changing a size profile.
+
+CAAC-045 | The author must not use clause-count quotas to determine completeness.
+
+### Size profiles
+
+The file column counts files that contain articles. Indexes and other supporting files are outside that count.
+
+| Size | Permitted upper levels | Article structure | Files containing articles |
+| --- | --- | --- | --- |
+| XS | None | One unnumbered article with direct content | One |
+| S | None | Articles with direct content or lower levels | One |
+| M | Chapter, section, subsection | Articles with direct content or lower levels | One |
+| L | Part, chapter, section, subsection | Articles with direct content or lower levels | One |
+| XL | Part, chapter, section, subsection within each module | Articles with direct content or lower levels | One distinct file per module, with at least two modules |
+
+CAAC-046 | The author must use the hierarchy and file boundaries in the selected size profile.
+
+CAAC-047 | The author may omit any permitted upper level.
+
+CAAC-048 | The author must place retained upper levels in their defined order on each branch.
+
+CAAC-049 | Each upper-level group and XL module must have at least one descendant article at any permitted depth.
+
+CAAC-050 | Each lower level must have the immediately preceding level as its parent, with the article preceding paragraphs.
+
+CAAC-051 | The author must place the articles of each XL module together in that module's file.
+
+CAAC-052 | The author must number S through XL articles consecutively from 1 in article order across the contract.
+
+CAAC-053 | The author must number each kind of upper or lower level consecutively from 1 among siblings in declared order.
+
+CAAC-054 | The author must preserve semantic content when changing only presentation.
+
+CAAC-055 | The author must preserve applicability, inheritance, precedence, and execution order when changing only presentation.
+
+CAAC-056 | The author must preserve semantic identities and semantic revisions when changing only presentation.
+
+CAAC-057 | The author may mix articles and permitted upper-level groups among siblings in declared order.
+
+CAAC-058 | The author must give each article and lower group exactly one nonempty list of permitted contents.
+
+Each alternative in the table specifies the permitted contents of a whole list.
+
+| Group | Permitted contents |
+| --- | --- |
+| Article | Entity placements or paragraphs |
+| Paragraph | Entity placements or items |
+| Item | Entity placements or subitems |
+| Subitem | Entity placements |
+
+CAAC-059 | The author must give each semantic entity exactly one primary placement across the review files.
+
+CAAC-060 | The author must give each open decision exactly one review location.
+
+CAAC-061 | The author must place each XL open decision in the review file of its assigned module.
+
+Display numbers and file paths identify presentation locations. Clause IDs identify obligations and remain subject to @CAAC-009.
+Derived trace addresses use the resulting package revision.
+
 Acceptance establishes a reviewed implementation target. It does not establish exhaustive correctness or legal enforceability.
+
+## Sizing implementation status (non-normative)
+
+The typed candidate CLI supports an XS article with one operation or one typed expression. An expression case binds directly to its expression and declares the expected result. Flat S also supports expression targets. S through XL support subitems, M and L support upper-level hierarchies, and XL writes one review file per module. The author selects the scope and size. See [candidate authoring](docs/candidate-authoring.md) for supported shapes and CLI limits.
 
 ## Case status (non-normative)
 
@@ -167,18 +253,39 @@ contract. They are not records of executed tests.
 | No cases | Contract with clauses but no cases | Rejected by CAAC-031 | CAAC-031 |
 | Owner not accepted | Contract treated as target without acceptance | Rejected by CAAC-035 | CAAC-035 |
 | Behavior change | Clause changed without review | Review triggered by CAAC-037 | CAAC-037 |
+| Smaller profile | Same semantic package with a smaller permitted profile | Clauses, definitions, exceptions, cases, and evidence requirements remain unchanged | CAAC-044 |
+| Quota-only completeness | Clause count meets a quota but a required obligation is missing | Rejected despite the clause count | CAAC-044, CAAC-045 |
+| Resize identity | A clause moves between permitted view groups | Same clause ID and semantic revision with a changed display location | CAAC-009, CAAC-044, CAAC-056 |
+| XS scope | One function or one expression in a flat article | Permitted in one file with no article number | CAAC-042, CAAC-046 |
+| XS invalid grouping | One function in an article with a paragraph | Rejected for the XS profile | CAAC-046 |
+| S lower levels | An article lists a paragraph with an item. The item has a subitem that places `rule-check` | Permitted in one file. Each lower level starts at 1 under its parent | CAAC-046, CAAC-050, CAAC-053, CAAC-058 |
+| M optional groups | A direct article followed by a sibling chapter → section → subsection → article branch | Permitted in one file as Articles 1 and 2. The chapter and section have a descendant article | CAAC-046, CAAC-047, CAAC-049, CAAC-052, CAAC-057 |
+| L skips a chapter | A part with a chapter containing Articles 1 and 2, followed by a sibling section containing an article | Permitted. The section is numbered 1 under the part and contains Article 3 | CAAC-046, CAAC-047, CAAC-048, CAAC-049, CAAC-052, CAAC-053 |
+| Inverted levels | An L section contains a chapter | Rejected for the upper-level order | CAAC-048 |
+| Empty upper branch | An L part has one valid chapter and one section without an article anywhere below it | Rejected for the section without a descendant article | CAAC-049 |
+| Skipped lower level | An S article places an item directly under the article | Rejected for the missing paragraph parent | CAAC-050, CAAC-058 |
+| Empty lower group | An S paragraph lists zero entity placements and has no items | Rejected for the empty paragraph | CAAC-058 |
+| Mixed lower content | An S paragraph lists an entity placement and an item | Rejected because the paragraph combines two alternatives | CAAC-058 |
+| Missing placement | An XL module loses its only article or a required clause loses its only placement | Rejected for the missing article or required placement | CAAC-024, CAAC-049, CAAC-059 |
+| Repeated entity placement | Both XL module review files give `rule-retry-limit` a primary placement | Rejected for the duplicate primary placement | CAAC-059 |
+| Missing or repeated decision | An XL package omits `decision-policy-owner` from every review file or presents it in both module files | Rejected for the missing or repeated review location | CAAC-060 |
+| Decision in the wrong file | `decision-policy-owner` is assigned to Intake and appears only in the Replay review file | Rejected for the file mismatch | CAAC-061 |
+| XL shared file | Two XL modules use the same article file | Rejected for the module file boundary | CAAC-043, CAAC-046, CAAC-051 |
+| XL article move | `intake.md` has policy Article 1, Intake Article 2 and the open `decision-policy-owner`. `replay.md` has Article 3. Move `article-policy` before the Replay article | Intake becomes Article 1. The policy moves to `replay.md` as Article 2. Replay stays Article 3. Keep `rule-retry-limit`, its obligation, `except-priority`, their references, and all semantic identities and revisions. The decision remains open in `intake.md` | CAAC-009, CAAC-043, CAAC-051, CAAC-052, CAAC-054, CAAC-056, CAAC-059, CAAC-060, CAAC-061 |
+| Display reorder | Two S articles contain inherited rules A and B with declared applicability. A precedes B in precedence and execution order. Place B's article before A's | Permitted with new display numbers. Both rules keep their applicability and inheritance. A still precedes B in precedence and execution | CAAC-052, CAAC-055 |
+| Changed evidence requirement | An XL move also drops the named evidence requirement for the priority Replay case | Rejected as a presentation-only change | CAAC-054 |
 
 ## Review records
 
-No independent review has been completed. This contract remains draft.
+Grok re-reviewed the hierarchy and placement rules after the three findings on draft 0.1.3. Hermes reproduced the CLI checks for the corrected hierarchy. On 2026-11-24 the owner accepted the hierarchy, file boundaries and numbering in the exact 0.1.4 document with SHA-256 `7d3a29551daaed3d73460900711571f716b8a03b2fa72cf452112966395b7108`. The implementation status and review record below describe subsequent verification.
 
 | Field | Value |
 | --- | --- |
-| Contract revision | 0.1.1 |
-| Reviewer | None |
-| Cases checked | 0 of 8 |
-| Findings | None recorded |
-| Remaining limits | All cases unverified. No owner acceptance. |
+| Contract revision | 0.1.4 |
+| Reviewers | Grok (rules and case mapping), Hermes (CLI replay) |
+| Cases checked in independent review | CAAC-36 re-review covered the three findings on descendant articles, preserved semantics and unique placement. |
+| Findings | Grok confirmed all three corrections within the reviewed scope. |
+| Remaining limits | The approval covers the reviewed sizing rules. Runtime execution evidence and acceptance of generated candidates are separate. |
 | Reviewer must differ from designer | Yes (CAAC-030) |
 
 ## First acceptance exercise
