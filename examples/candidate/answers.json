@@ -1,0 +1,135 @@
+{
+  "expected_base": "81a77eaa249fceac4686cfe182d8c3472491b8428f8663799bb2fc4ce4422648",
+  "answers": [
+    {
+      "action": "propose-entity",
+      "answer_id": "answer-term-zero",
+      "target": {
+        "kind": "definition",
+        "id": "term-zero"
+      },
+      "value": {
+        "id": "term-zero",
+        "kind": "definition",
+        "text": "Zero is the integer value 0."
+      },
+      "source": "Synthetic example, not owner-approved"
+    },
+    {
+      "action": "propose-entity",
+      "answer_id": "answer-rule-echo",
+      "target": {
+        "kind": "clause",
+        "id": "rule-echo"
+      },
+      "value": {
+        "id": "rule-echo",
+        "kind": "clause",
+        "actor": "Echo",
+        "modality": "obligation",
+        "text": "Echo returns the supplied integer.",
+        "definition_refs": [
+          "term-zero"
+        ]
+      },
+      "source": "Synthetic example, not owner-approved"
+    },
+    {
+      "action": "propose-entity",
+      "answer_id": "answer-operation-echo",
+      "target": {
+        "kind": "operation",
+        "id": "operation-echo"
+      },
+      "value": {
+        "id": "operation-echo",
+        "kind": "operation",
+        "name": "echo",
+        "inputs": {
+          "value": "i32"
+        },
+        "output": "i32",
+        "clause_refs": [
+          "rule-echo"
+        ],
+        "exclusions": []
+      },
+      "source": "Synthetic example, not owner-approved"
+    },
+    {
+      "action": "propose-entity",
+      "answer_id": "answer-except-zero",
+      "target": {
+        "kind": "exception",
+        "id": "except-zero"
+      },
+      "value": {
+        "id": "except-zero",
+        "kind": "exception",
+        "target": "rule-echo",
+        "applicability": {
+          "kind": "input-equals",
+          "field": "value",
+          "value": 0
+        },
+        "effect": {
+          "kind": "replace-result",
+          "value": 1
+        }
+      },
+      "source": "Synthetic example, not owner-approved"
+    },
+    {
+      "action": "propose-entity",
+      "answer_id": "answer-case-zero",
+      "target": {
+        "kind": "case",
+        "id": "case-zero"
+      },
+      "value": {
+        "id": "case-zero",
+        "kind": "case",
+        "operation": "operation-echo",
+        "input": {
+          "value": 0
+        },
+        "expected": 1,
+        "clause_refs": [
+          "rule-echo"
+        ],
+        "exception_refs": [
+          "except-zero"
+        ]
+      },
+      "source": "Synthetic example, not owner-approved"
+    },
+    {
+      "action": "propose-entity",
+      "answer_id": "answer-case-negative",
+      "target": {
+        "kind": "case",
+        "id": "case-negative"
+      },
+      "value": {
+        "id": "case-negative",
+        "kind": "case",
+        "operation": "operation-echo",
+        "input": {
+          "value": -7
+        },
+        "expected": -7,
+        "clause_refs": [
+          "rule-echo"
+        ],
+        "exception_refs": []
+      },
+      "source": "Synthetic example, not owner-approved"
+    },
+    {
+      "action": "skip",
+      "answer_id": "answer-scope",
+      "decision_id": "decision-scope",
+      "source": "No scope decision supplied"
+    }
+  ]
+}

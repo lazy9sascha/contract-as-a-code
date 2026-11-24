@@ -1,0 +1,36 @@
+{
+  "format": "caac-candidate-v1",
+  "semantic": {
+    "namespace": "synthetic-echo",
+    "entities": [],
+    "unresolved": [
+      {
+        "id": "decision-scope",
+        "question": "Which integer operations are in scope?",
+        "required": true
+      }
+    ]
+  },
+  "presentation": {
+    "size": "S",
+    "nodes": [
+      {
+        "kind": "article",
+        "id": "article-main",
+        "title": "Echo behavior",
+        "entities": [
+          "term-zero",
+          "rule-echo",
+          "operation-echo",
+          "except-zero",
+          "case-zero",
+          "case-negative"
+        ]
+      }
+    ]
+  },
+  "authority": {
+    "owner_acceptance": "pending",
+    "implementation_admission": "pending"
+  }
+}

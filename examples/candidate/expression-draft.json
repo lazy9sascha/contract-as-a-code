@@ -1,0 +1,49 @@
+{
+  "format": "caac-candidate-v1",
+  "semantic": {
+    "namespace": "synthetic-less-than",
+    "entities": [
+      {
+        "kind": "clause",
+        "id": "rule-less-than",
+        "actor": "Integer comparison",
+        "modality": "obligation",
+        "text": "Integer comparison yields true exactly when left is less than right for signed 32-bit integers.",
+        "definition_refs": []
+      },
+      {
+        "kind": "expression",
+        "id": "expression-less-than",
+        "text": "left < right",
+        "inputs": {"left": "i32", "right": "i32"},
+        "output": "bool",
+        "clause_refs": ["rule-less-than"]
+      },
+      {
+        "kind": "case",
+        "id": "case-less-than",
+        "expression": "expression-less-than",
+        "input": {"left": 2, "right": 3},
+        "expected": true,
+        "clause_refs": ["rule-less-than"],
+        "exception_refs": []
+      }
+    ],
+    "unresolved": []
+  },
+  "presentation": {
+    "size": "XS",
+    "nodes": [
+      {
+        "kind": "article",
+        "id": "article-expression",
+        "title": "left < right",
+        "entities": ["rule-less-than", "expression-less-than", "case-less-than"]
+      }
+    ]
+  },
+  "authority": {
+    "owner_acceptance": "pending",
+    "implementation_admission": "pending"
+  }
+}

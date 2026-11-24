@@ -1,0 +1,7 @@
+{"id":"term-zero","kind":"definition","text":"Zero is the integer value 0."}
+{"id":"rule-echo","kind":"clause","actor":"Echo","modality":"obligation","text":"Echo returns the supplied integer.","definition_refs":["term-zero"]}
+{"id":"operation-echo","kind":"operation","name":"echo","inputs":{"value":"i32"},"output":"i32","clause_refs":["rule-echo"],"exclusions":[]}
+{"id":"except-zero","kind":"exception","target":"rule-echo","applicability":{"kind":"input-equals","field":"value","value":0},"effect":{"kind":"replace-result","value":1}}
+{"id":"case-zero","kind":"case","operation":"operation-echo","input":{"value":0},"expected":1,"clause_refs":["rule-echo"],"exception_refs":["except-zero"]}
+{"id":"case-negative","kind":"case","operation":"operation-echo","input":{"value":-7},"expected":-7,"clause_refs":["rule-echo"],"exception_refs":[]}
+skip

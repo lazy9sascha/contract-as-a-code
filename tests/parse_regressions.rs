@@ -7,8 +7,8 @@ use tempfile::tempdir;
 #[test]
 fn parses_repository_contract_clauses_across_sections() {
     let schema = parse_markdown(include_str!("../CONTRACT.md")).unwrap();
-    assert_eq!(schema.clauses.len(), 43);
-    assert_eq!(schema.cases.len(), 8);
+    assert_eq!(schema.clauses.len(), 61);
+    assert_eq!(schema.cases.len(), 29);
     assert!(schema.clauses.iter().any(|c| c.id == "CAAC-043"));
     assert_eq!(schema.clauses[0].actor, "The author");
     assert!(schema.clauses[0].obligation.starts_with("must define"));
@@ -140,4 +140,31 @@ fn mixed_valid_and_malformed_clauses_fail_without_output() {
     }
     assert!(parse_markdown("RULE-001 | Server must not stop.\n").is_ok());
     assert!(parse_markdown("RULE-001 | Server must notify.\n").is_ok());
+}
+
+#[test]
+fn sizing_guidance_references_method_rules_without_clause_count_quotas() {
+    let schema = parse_markdown(include_str!("../CONTRACT.md")).unwrap();
+    assert_eq!(schema.version, "0.1.4");
+    for id in [
+        "CAAC-009", "CAAC-044", "CAAC-045", "CAAC-046", "CAAC-047", "CAAC-048", "CAAC-049",
+        "CAAC-050", "CAAC-051", "CAAC-052", "CAAC-053", "CAAC-054", "CAAC-055", "CAAC-056",
+        "CAAC-057", "CAAC-058", "CAAC-059", "CAAC-060", "CAAC-061",
+    ] {
+        assert!(schema.clauses.iter().any(|clause| clause.id == id));
+        assert!(
+            schema
+                .cases
+                .iter()
+                .any(|case| case.clauses.iter().any(|reference| reference == id))
+        );
+    }
+    let skill = include_str!("../.agents/skills/caac/SKILL.md");
+    assert!(skill.contains("CAAC-040 through CAAC-045"));
+    assert!(!skill.contains("3-5 clauses"));
+    assert!(!skill.contains("30+ clauses"));
+    let quickstart = include_str!("../docs/quickstart.md");
+    assert!(quickstart.contains("../CONTRACT.md#contract-sizing"));
+    assert!(quickstart.contains("scope estimate in the Markdown scaffold"));
+    assert!(quickstart.contains("candidate-authoring.md#presentation-and-boundaries"));
 }

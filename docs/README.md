@@ -1,8 +1,12 @@
-# Design and evidence index
+# CAAC documentation
 
-The documents below specify the proposed contract-completion product. They are conceptual designs, not implemented feature claims.
-
-Independent content review, owner acceptance, runtime evidence, and publication remain separate results.
+| Task | Guide |
+| --- | --- |
+| See current and proposed milestones | [Roadmap](ROADMAP.md) |
+| Create and check a first contract | [Quickstart](quickstart.md) |
+| Draft a contract from an existing project | [Scan to draft](scan-to-draft.md) |
+| Revise a draft and trace a clause | [Candidate authoring](candidate-authoring.md) |
+| Inspect past experiments and reviews | [Reports](../reports/) |
 
 ## Conceptual deliverables
 
@@ -23,18 +27,10 @@ Independent content review, owner acceptance, runtime evidence, and publication 
 | T13 | [Rust architecture](design/rust-architecture.md) | Core/host boundaries, prototype transition, distribution, and evidence. |
 | T14 | [Conceptual acceptance](design/conceptual-acceptance.md) | Integrated baseline, scenarios, review outcomes, and owner gate. |
 
-## Sources and review evidence
+## Reusable project contracts
 
-- [Method contract](../CONTRACT.md) supplies authoring and review rules.
-- [CONTRACT.md](../CONTRACT.md) is the canonical method contract.
-- [examples/batch-division.md](../examples/batch-division.md) is the reference example.
+- [Reusable project contracts](design/reusable-contracts.md): proposed format for logging, interfaces, and APIs.
 
-Retained artifact hashes identify the reviewed bytes. They do not supply owner acceptance or executed semantic evidence automatically.
+## Contract references
 
-## Implemented prototype
-
-The [root README](../README.md) documents the Rust scaffold and check commands.
-The [tooling contract](../contracts/tooling.md) bounds the prototype.
-
-The designs above specify additional responsibilities. They do not claim those
-components run today.
+The [method contract](../CONTRACT.md) defines the authoring rules. The [tooling contract](../contracts/tooling.md) defines the CLI checks. The [batch division example](../examples/batch-division.md) shows clauses and cases together.

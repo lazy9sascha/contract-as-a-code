@@ -182,7 +182,7 @@ fn concurrent_contract_edits_are_not_overwritten() {
         let mut reader = BufReader::new(stdout);
         let mut line = String::new();
         while reader.read_line(&mut line).is_ok_and(|count| count > 0) {
-            if line.contains("Decision 1 of 1: First?") {
+            if line.contains("Decision 1 of 1: \"First?\"") {
                 let _ = ready_tx.send(reader.into_inner());
                 return;
             }
@@ -479,7 +479,7 @@ fn harness_uses_checker_decisions_for_every_supported_line_separator() {
         assert!(output.status.success(), "separator {separator:?}: {stdout}");
         assert!(stdout.contains("harness iteration 2"));
         assert!(stdout.contains("PRE-REVIEW CHECK: PASSED"));
-        assert!(!stdout.contains("Decision 1 of 1: Excluded"));
+        assert!(!stdout.contains("Decision 1 of 1: \"Excluded"));
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
             original.replace("OPEN: Which value?", "DECISION: one")

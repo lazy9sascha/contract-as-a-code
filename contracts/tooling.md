@@ -1,16 +1,20 @@
 # Local tooling contract
 
-Revision: draft-2. Status: draft. Scope: local CLI authoring support and example execution.
+Revision: draft-3. Status: draft. Scope: local CLI authoring support and example execution.
 
 The user requested implementation in this session. That request authorizes prototype work, not approval of generated contract requirements.
 
 The actor is `CLI`. The Rust executable is named `caac`.
 
-Commands are `scratch`, `plugin`, `migration`, `check`, `watch`, `interview`, `resume`, `run`, `gen`, `md`, `parse`, `extract`, `sync`, and `suggest`.
+Commands are `scratch`, `plugin`, `migration`, `baseline check`, `check`, `watch`, `interview`, `resume`, `run`, `gen`, `md`, `parse`, `extract`, `sync`, and `pattern`. Source suggestions are an `interview --suggest` mode and part of `run`, not a standalone command.
+
+Current command inventory note (non-normative): the experimental 0.10 line also exposes `discover`, `collect`, `review-packet`, `review-findings`, and `candidate` subcommands. Their bounded profiles are documented in [candidate authoring](../docs/candidate-authoring.md), [discovery](../docs/contract-discovery.md), [collection](../docs/contract-collection.md), [review packets](../docs/review-packet.md), and [findings](../docs/review-findings.md). This inventory is not a normative contract for every new command. The [contract-to-execution audit](../reports/scan-draft-contract-map.md) records that mapping gap.
 
 ## Authoring modes
 
 Each authoring command takes an output directory and a required `--title`. The title defines the selected scope.
+
+The optional `--size` records an XS, S or M scope estimate in the Markdown scaffold. A scaffold without `--size` omits the estimate. Select a rendering profile in the [typed candidate workflow](../docs/candidate-authoring.md#presentation-and-boundaries).
 
 `plugin` and `migration` require one or more explicit `--source` file arguments. They do not discover an entire repository.
 
@@ -41,6 +45,31 @@ TOOL-012 | For `migration`, `CLI` must include keep/change/remove decisions, tar
 TOOL-013 | `CLI` must label every generated contract as draft with owner acceptance pending.
 
 The baseline identifies selected file contents. It does not establish test success or inventory completeness.
+
+## Source observations and currentness (non-normative)
+
+`plugin` and `migration` record `source-syntax-v1` in `baseline.json`. The analyzer selects a Tree-sitter 0.27.2 grammar by the resolved UTF-8 file's case-sensitive extension.
+
+| Extension | Grammar | Recorded syntax |
+| --- | --- | --- |
+| `.rs` | `tree-sitter-rust` 0.24.2 | Function declarations and signatures, including enclosing module, trait or implementation scope where present. |
+| `.py` | `tree-sitter-python` 0.25.0 | Function declarations, decorators, `raise` and `assert`, with enclosing scope where present. |
+
+The [source-intake CLI tests](../tests/source_intake_regressions.rs) cover selected examples in both languages. The Rust generation profile remains separate and uses Syn.
+
+Each captured file records its SHA-256 digest, byte length, resolved identity, and all selected path aliases. Syntax observations include exact source excerpts, half-open byte ranges, one-based LF line and byte-column locations, enclosing scope, and parser versions. Source bytes and line endings are not normalized. Other extensions record `unsupported-language`. Invalid UTF-8 records `unsupported-encoding`. These statuses, parse errors and exhausted budgets produce no observations for the affected file.
+
+Observations do not establish runtime behavior, reachability, active configuration, expanded macros, resolved types, imports, decorator effects, or whole-project coverage. Source text claiming approval cannot change `authority: observation`, `execution: not-run`, or `owner_acceptance: pending`.
+
+Run `caac baseline check OUTPUT/baseline.json` to compare the recorded files with current source bytes, selected-path resolution, and recomputed syntax evidence. The JSON receipt identifies the exact baseline input by resolved path and SHA-256. It reports stale, retargeted, unavailable, or inconsistent evidence without rewriting the historical baseline. A matching source with unsupported analysis can be identity-current; this does not establish successful source analysis or semantic verification.
+
+A successful check means the selected identities and recorded bounded evidence match at the check, not that requirements or a contract are accepted. Changed files with the same length and timestamp still fail their digest comparison. An alias pointing to a different target is not current, even if its target has identical bytes. Old, unversioned baselines are unsupported; create a new authoring output rather than silently upgrading them.
+
+Intake is limited to 128 selected paths, 1 MiB per source file, and 8 MiB of captured source bytes. Baseline input and output are limited to 16 MiB. Per-file analysis limits include 100,000 visited syntax nodes, depth 128, 2,048 observations, 16 KiB per excerpt, and 1 MiB of emitted names, scopes, and excerpts. Parsing has a one-second cancellation budget; traversal also checks a two-second overall budget. These are work bounds, not a filesystem I/O deadline.
+
+Only regular files are read. Unix reads use nonblocking, no-follow descriptor opening and metadata consistency checks. Obvious special files are rejected before opening. These checks detect sampled concurrent changes; they are not an atomic filesystem snapshot or a lock against arbitrary writers. A source can change after a check returns. External dependency and semantic currentness remain unknown.
+
+This intake does not resolve OPEN decisions, convert answers into canonical obligations, or complete an authoring role. Suggestions and answer-to-schema conversion remain separate work.
 
 ## Declared syntax checks
 
@@ -234,16 +263,34 @@ Arbitrary natural-language prose is not converted into executable semantics.
 
 ## Suggest
 
-`suggest` is a mode of `interview` that reads source files and generates
-heuristic suggestions for open decisions.
+`interview --suggest` presents review questions linked to bounded source syntax.
+It does not generate contract answers. `run` presents the same questions before its interview step.
 
 TOOL-057 | `CLI` must read source files when `--source` is provided.
 
-TOOL-058 | `CLI` must generate suggestions based on keyword matching.
+TOOL-058 | `CLI` must classify pending-review questions by decision keywords without inferring requirements from source syntax.
 
-TOOL-059 | `CLI` must present suggestions as "Suggested:" lines before each question.
+TOOL-059 | `CLI` must display "Suggested question:" lines before interviewing the corresponding file.
 
 TOOL-060 | `CLI` must not auto-apply suggestions. The owner decides.
+
+### Suggestion evidence profile (non-normative)
+
+Revision draft-3 replaces TOOL-058's unsupported heuristic answers with question-category selection and narrows TOOL-059 to the actual per-file batch display. These IDs are preserved. TOOL-060 is unchanged. This draft revision does not establish owner acceptance or approval of any generated requirement.
+
+`interview --suggest [--source FILE ... | --baseline FILE] FILE ...` accepts either fresh source capture or one historical baseline, not both. Source evidence options on `interview` require `--suggest`. `run` accepts the same mutually exclusive evidence options without that flag. `--` ends option parsing for contract filenames; a source filename beginning with a hyphen can use an explicit relative path such as `./-source.rs`.
+
+Fresh sources use the bounded intake profile above. Missing or unreadable selected files are errors, not silently omitted evidence. Historical evidence is read once for its exact digest, parsing, and verification. Stale, retargeted, unavailable, or inconsistent historical evidence fails without fallback to fresh evidence. Unsupported language, encoding, syntax, and parser-budget statuses remain explicit even when identity matches. Empty evidence is allowed for questions, not as support for an inferred answer.
+
+Each file's question batch contains one evidence context and pending-review question records. The context retains every selected source record, exact hash, source span, parser profile, and available observation. Each question references the SHA-256 of the exact serialized context, rather than choosing the first source or declaration. The link identifies candidate evidence, not an established mapping between source behavior and a requirement. Context authority remains observation, execution is not run, and owner acceptance is pending. Question authority is proposal and status is pending-review.
+
+Keyword categories select questions about inputs, results, actors, failures, or scope. Declaration, return-type spelling, raise, assert, and decorator syntax cannot determine required domains, actors, outcomes, or runtime failures. Ambiguous or conflicting observations remain unresolved. Proposed definitions and exception relationships are explicitly unsupported by these question records; typed canonical relationships and answer-to-schema conversion remain separate work.
+
+All selected contract files receive a read/check preflight. Evidence is captured or rechecked before each file's suggestion batch and each later harness interview step, including explicit evidence validation when no OPEN remains. Snapshots are current only at capture/check, not for the duration of an interactive session. The shared checker determines OPEN locations and excluded content. Excluded-only files do not receive a suggestion interview checkpoint.
+
+Displayed source text, paths, symbols, and decisions are JSON-quoted and ASCII-escaped, including terminal controls, directional controls, and Unicode line separators. Decoding these strings preserves the raw evidence; escaping does not grant it authority. The entire batch is prepared before display, with a 32 MiB serialized-display limit and a 16 KiB decision-text limit. Exceeding either fails rather than silently truncating evidence. An earlier completed file is not rolled back if a later file changes or fails; this is not a multi-file transaction.
+
+Questions are displayed before the ordinary interview. Skipping or pressing Enter does not apply a suggestion. Source text claiming approval has no authority. An explicit owner answer still records only a DECISION annotation under the existing interview workflow, not an accepted obligation or automatic schema change.
 
 ## Contract harness
 

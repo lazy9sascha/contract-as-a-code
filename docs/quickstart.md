@@ -21,10 +21,16 @@ This guide creates a first contract in five minutes.
 cargo build
 ```
 
+## Sizing limit
+
+Use `--size XS`, `--size S` or `--size M` to record a scope estimate in the Markdown scaffold. Omitting the flag leaves the estimate open. Use the [method sizing rules](../CONTRACT.md#contract-sizing) to estimate scope. Typed candidate drafts select their size from the [supported presentation profiles](candidate-authoring.md#presentation-and-boundaries).
+
+Size is not a clause-count quota. All canonical content remains necessary at every permitted size, and XL contracts retain the module-splitting requirement.
+
 ## Step 2: Create a scratch contract
 
 ```sh
-cargo run -- scratch /tmp/my-contract --title "Recipient normalization"
+cargo run -- scratch /tmp/my-contract --title "Recipient normalization" --size XS
 ```
 
 This creates `/tmp/my-contract/CONTRACT.md` with terms, inputs, results, failures,

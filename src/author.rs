@@ -1,6 +1,3 @@
-use serde_json::json;
-use sha2::{Digest, Sha256};
-use std::collections::HashSet;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -11,9 +8,24 @@ pub fn create(
     title: &str,
     sources: &[PathBuf],
 ) -> Result<PathBuf, String> {
+    create_with_scope_size(mode, destination, title, sources, None)
+}
+
+pub fn create_with_scope_size(
+    mode: &str,
+    destination: &Path,
+    title: &str,
+    sources: &[PathBuf],
+    scope_size: Option<&str>,
+) -> Result<PathBuf, String> {
     if !matches!(mode, "scratch" | "plugin" | "migration") {
         return Err("Unknown authoring mode".to_owned());
     }
+    let scope_note = match scope_size {
+        None => String::new(),
+        Some(size @ ("XS" | "S" | "M")) => format!("Proposed scope size: {size}.\n"),
+        Some(_) => return Err("Unsupported --size value. Choose XS, S, or M.".into()),
+    };
     if title.trim().is_empty() || title.chars().any(invalid_title_character) {
         return Err("Title must be nonempty and contain no control characters".to_owned());
     }
@@ -29,25 +41,22 @@ pub fn create(
         return Err("Scratch does not accept implementation sources".to_owned());
     }
 
-    let mut seen = HashSet::new();
-    let mut source_digests = Vec::new();
-    for source in sources {
-        let resolved_source = fs::canonicalize(source).map_err(|error| error.to_string())?;
-        if !seen.insert(resolved_source.clone()) {
-            continue;
-        }
-        let bytes = fs::read(&resolved_source).map_err(|error| error.to_string())?;
-        let digest = Sha256::digest(&bytes);
-        let digest = digest
-            .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect::<String>();
-        source_digests.push((resolved_source, digest));
-    }
+    let captured = crate::source_intake::capture_sources(sources)?;
 
+    let baseline_text = if captured.is_empty() {
+        None
+    } else {
+        let base = crate::output::destination_key(destination)?;
+        if base.to_str().is_none() {
+            return Err("Destination identity must use a UTF-8 path".into());
+        }
+        Some(crate::source_intake::encode(
+            &crate::source_intake::make_baseline(mode, &base, captured),
+        )?)
+    };
     let title = title.trim();
     let mut text = format!(
-        "# {title}\n\nMode: {mode}. Revision: draft-1. Status: draft. Owner acceptance: pending.\n\n\
+        "# {title}\n\nMode: {mode}. Revision: draft-1. Status: draft. Owner acceptance: pending.\n{scope_note}\n\
 ## Scope\n\nOPEN: Define the actor, boundary, observables, and exclusions for {title}.\n\n\
 ## Terms and inputs\n\nOPEN: Define terms, input types, ranges, and invalid input handling.\n\n\
 ## Results and failures\n\nOPEN: Define outputs, effects, completion, and failure behavior.\n\n\
@@ -68,6 +77,10 @@ pub fn create(
         );
     }
 
+    if mode != "scratch" {
+        text.push_str("\n## Source intake (non-normative)\n\n`baseline.json` records exact source revisions and bounded syntax observations, not requirements. Run `caac baseline check baseline.json` to recheck selected source identities. Runtime behavior, dependencies, and owner acceptance remain unverified.\n");
+    }
+
     if let Some(parent) = destination
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
@@ -80,55 +93,12 @@ pub fn create(
     contract_file
         .write_all(text.as_bytes())
         .map_err(|error| error.to_string())?;
-    if !source_digests.is_empty() {
-        let destination_absolute =
-            fs::canonicalize(destination).map_err(|error| error.to_string())?;
-        let baseline = source_digests
-            .iter()
-            .map(|(source, digest)| {
-                json!({
-                    "path": relative_path(&destination_absolute, source),
-                    "sha256": digest,
-                })
-            })
-            .collect::<Vec<_>>();
-        let baseline_value = json!({
-            "mode": mode,
-            "files": baseline,
-            "execution": "not-run",
-            "owner_acceptance": "pending",
-        });
-        let mut baseline_text =
-            serde_json::to_string_pretty(&baseline_value).map_err(|error| error.to_string())?;
-        baseline_text.push('\n');
-        fs::write(destination.join("baseline.json"), baseline_text)
-            .map_err(|error| error.to_string())?;
+    if let Some(baseline_text) = baseline_text {
+        fs::write(destination.join("baseline.json"), baseline_text).map_err(|e| e.to_string())?;
     }
     Ok(contract_path)
 }
 
 fn invalid_title_character(character: char) -> bool {
     (character as u32) < 32 || matches!(character, '\u{0085}' | '\u{2028}' | '\u{2029}')
-}
-
-fn relative_path(base: &Path, target: &Path) -> String {
-    let base_components = base.components().collect::<Vec<_>>();
-    let target_components = target.components().collect::<Vec<_>>();
-    let shared = base_components
-        .iter()
-        .zip(&target_components)
-        .take_while(|(left, right)| left == right)
-        .count();
-    let mut relative = PathBuf::new();
-    for _ in shared..base_components.len() {
-        relative.push("..");
-    }
-    for component in &target_components[shared..] {
-        relative.push(component.as_os_str());
-    }
-    if relative.as_os_str().is_empty() {
-        ".".to_owned()
-    } else {
-        relative.display().to_string()
-    }
 }
