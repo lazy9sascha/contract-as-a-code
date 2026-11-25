@@ -19,3 +19,5 @@ jobs:
         run: cargo clippy --all-targets --locked -- -D warnings
       - name: contract syntax check
         run: cargo run -- check CONTRACT.md contracts/tooling.md examples/batch-division.md
+      - name: release helper regression checks
+        run: sh tests/release_regressions.sh

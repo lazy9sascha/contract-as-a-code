@@ -33,6 +33,8 @@ Given a project and scope, the authoring assistant produces `candidate.json`, a 
 
 ### Closure review
 
+The historical itoa, itsdangerous and Redis draft inputs are retained outside the public tag. The [public itoa replay](../examples/candidate/itoa/README.md) supplies fresh inputs, a source pin and expected output hashes for one formatting clause.
+
 On 2026-11-25 the owner approved 0.10.0 for independently reproducible draft generation, meaning-preserving XS–XL resizing and rejection of broken references and lossy splits. The tickets below remain open for the broader requirements.
 
 CAAC-07 is closed. The owner adopted `caac candidate apply` as the typed entry point. On November 24, 47 focused tests passed. Direct apply and verify succeeded at each size from XS through XL. The complete semantic object and reference bindings survived each change of size. Five invalid inputs exited 2 before writing output.

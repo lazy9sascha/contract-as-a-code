@@ -1,3 +1,6 @@
+# Candidate answers and provenance refer to exact input bytes.
+examples/candidate/**/*.json text eol=lf
+
 # Deploy-time exclusions (git archive / GitHub release)
 docs/task/ export-ignore
 docs/task/** export-ignore

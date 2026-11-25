@@ -1,10 +1,12 @@
 # Bounded paragraph presentation
 
+This report records the paragraph and item increments before the 0.10.0 release. For the shipped hierarchy, module files, attachments and sentence parts, see the [candidate authoring guide](../docs/candidate-authoring.md#presentation-and-boundaries).
+
 ## Scope and contract mapping
 
 This increment implements explicit article-to-paragraph grouping in the existing candidate presentation model. It advances CAAC-044 semantic preservation and the requested CAAC-08/16 structural workflow. It does not complete either ticket, automatic XS–XL solutioning or the full legal hierarchy. Existing method clauses and owner decisions are unchanged.
 
-The explicit experimental paragraph profile separates stable IDs from display ordinals. It permits mixed flat and paragraph-containing articles, but each article has exactly one nonempty placement field. Paragraphs have IDs and entity references only. They introduce no normative text, inherited applicability, precedence or implicit exception relation. Numbering resets at each article. Full items/subitems, parent omissions, attachments, forms and sentence/proviso relationships remain unsupported.
+The explicit experimental paragraph profile separates stable IDs from display ordinals. It permits mixed flat and paragraph-containing articles, but each article has exactly one nonempty placement field. Paragraphs have IDs and entity references only. They introduce no normative text, inherited applicability, precedence or implicit exception relation. Numbering resets at each article. At that stage the paragraph profile had no items, subitems, omitted parent levels, attachments, forms or sentence relationships.
 
 ## Implementation and compatibility
 
@@ -36,7 +38,7 @@ Two independent reviewers found no blocking code issue. The real-draft reviewer 
 
 The full 268-test suite, formatting and strict Clippy passed before the scoped commit. Independent static review covered profile dispatch, strict shape checks, parent receipt validation, comparison slot boundaries, literal escaping and recomputed trace mappings. No target implementation was built or executed by the itoa exercise.
 
-The output remains a pending review document, not a legally accepted paragraph policy or a completed contract. This increment adds a real missing structural capability, but project relationship discovery, robust XS–XL/partition proposals and the remaining hierarchy are still core 0.10 gaps. Execution evidence and transitive freshness belong to the separately planned 0.11 gate and are not supplied by these artifact checks.
+The output remains a pending review document, not a legally accepted paragraph policy or a completed contract. This increment adds a real missing structural capability, but project relationship discovery, robust XS–XL/partition proposals and the remaining hierarchy were still open at the time of this exercise. Execution evidence and transitive freshness belong to the separately planned 0.11 gate and are not supplied by these artifact checks.
 
 ## Follow-up: item placement below a paragraph
 
@@ -46,7 +48,7 @@ The concrete Pigeon use is one common-completion paragraph with three groups: CO
 
 Focused regressions exercise S/M item publication, exact location trace, comparison/body revision, mixed placements and restoration to paragraph-only and flat formats. Invalid shapes, wrong profiles, nested items, duplicate presentation IDs and incomplete/duplicate semantic placement fail. Independent static review found no blocking issue; it requested an explicit body-edit assertion, distinct from successful execution alone. Pre-extension retained itoa paragraph and flat artifacts are also verified with the new binary, separately from new-binary roundtrip tests.
 
-Subitems, arbitrary legal nesting, omitted-parent rules, annexes and sentence/proviso semantics remain unsupported. No parser, dependency, command or inheritance engine was added. This presentation increment does not create implementation links, run Pigeon behavior tests or implement the planned 0.11 evidence lifecycle.
+The item increment did not cover subitems, arbitrary legal nesting, omitted-parent rules, annexes or sentence semantics. No parser, dependency, command or inheritance engine was added. This presentation increment does not create implementation links, run Pigeon behavior tests or implement the planned 0.11 evidence lifecycle.
 
 The actual Pigeon draft then completed 19 CLI calls: parent verification followed by item grouping, swapping two items and flat restoration, with verification and four traces at each stage. All semantic objects, applicability definitions and eight questions were identical throughout. The stable atomicity/replay item IDs retained their entities while their ordinals changed. Restored candidate SHA-256 is `329b6bc92c9d2a73cf0fa6ce74f084f77890baf14f3f887ee3adb6b3d872605b`; restored review SHA-256 is `ac1ccd06e39cc0cb950fe413332d6bf1c12138e85896459f981920cf860e1366`, both exactly equal to the pre-item source. The restored revision manifest is also equal; the new transition provenance records the roundtrip rather than pretending to be the original receipt.
 
