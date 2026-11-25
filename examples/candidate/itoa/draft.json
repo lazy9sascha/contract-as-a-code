@@ -1,0 +1,31 @@
+{
+  "format": "caac-candidate-v1",
+  "semantic": {
+    "namespace": "itoa-format-example",
+    "entities": [],
+    "unresolved": [
+      {
+        "id": "decision-coverage",
+        "question": "Which other integer inputs should this draft cover?",
+        "required": true
+      }
+    ]
+  },
+  "presentation": {
+    "size": "S",
+    "nodes": [
+      {
+        "kind": "article",
+        "id": "article-format",
+        "title": "Formatting example",
+        "entities": [
+          "rule-format-128"
+        ]
+      }
+    ]
+  },
+  "authority": {
+    "owner_acceptance": "pending",
+    "implementation_admission": "pending"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "expected_base": "c39ece3e4eeb05cdd0b4d43f90ebb6a1fbb3f635e32512c763704bcd23faf760",
+  "answers": [
+    {
+      "action": "propose-entity",
+      "answer_id": "answer-format-128",
+      "target": {
+        "kind": "clause",
+        "id": "rule-format-128"
+      },
+      "value": {
+        "kind": "clause",
+        "id": "rule-format-128",
+        "actor": "Buffer::format",
+        "modality": "obligation",
+        "text": "Formatting the unsigned 64-bit integer 128 returns the string \"128\".",
+        "definition_refs": []
+      },
+      "source": "dtolnay/itoa@9339ca99a43c550b5ee36e2afe524d1c90413461 src/lib.rs lines 20-24; source SHA-256 4289a1fc5c20e8927f4ce27d1d0f085ae0f9fe7b666462dce92bd36466e89829"
+    }
+  ]
+}

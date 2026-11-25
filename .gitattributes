@@ -1,3 +1,5 @@
+* text=auto eol=lf
+
 # Deploy-time exclusions (git archive / GitHub release)
 docs/task/ export-ignore
 docs/task/** export-ignore

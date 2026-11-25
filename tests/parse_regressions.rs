@@ -168,3 +168,51 @@ fn sizing_guidance_references_method_rules_without_clause_count_quotas() {
     assert!(quickstart.contains("scope estimate in the Markdown scaffold"));
     assert!(quickstart.contains("candidate-authoring.md#presentation-and-boundaries"));
 }
+
+#[test]
+fn sizing_instructions_refer_to_the_current_candidate_layouts() {
+    let guide = include_str!("../docs/candidate-authoring.md");
+    assert!(
+        guide
+            .lines()
+            .any(|line| line == "## Presentation and boundaries")
+    );
+
+    let contract = include_str!("../CONTRACT.md");
+    let (_, status) = contract
+        .split_once("## Sizing implementation status (non-normative)\n")
+        .expect("locate the method's CLI sizing note");
+    let procedure = include_str!("../docs/scan-to-draft.md");
+    let (_, step) = procedure
+        .split_once("**Choose a proposed structure.**")
+        .expect("locate the scan procedure's sizing step");
+    let step = step
+        .lines()
+        .take_while(|line| {
+            !line
+                .split_once(". ")
+                .is_some_and(|(number, _)| number.parse::<usize>().is_ok())
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    for (file, text, link) in [
+        (
+            "CONTRACT.md",
+            status.split("\n## ").next().unwrap(),
+            "](docs/candidate-authoring.md#presentation-and-boundaries)",
+        ),
+        (
+            "docs/scan-to-draft.md",
+            step.as_str(),
+            "](candidate-authoring.md#presentation-and-boundaries)",
+        ),
+    ] {
+        let repeats_profile = text
+            .split(|c: char| !c.is_ascii_alphanumeric())
+            .any(|word| matches!(word, "XS" | "S" | "M" | "L" | "XL"));
+        assert!(
+            text.contains(link) && !repeats_profile,
+            "{file}: link to docs/candidate-authoring.md#presentation-and-boundaries for CLI sizing support. Keep individual profiles in that guide."
+        );
+    }
+}

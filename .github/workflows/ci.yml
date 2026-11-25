@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: checkout byte stability
+        run: sh tests/checkout_bytes.sh
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: cargo fmt
@@ -19,3 +21,5 @@ jobs:
         run: cargo clippy --all-targets --locked -- -D warnings
       - name: contract syntax check
         run: cargo run -- check CONTRACT.md contracts/tooling.md examples/batch-division.md
+      - name: release helper regression checks
+        run: sh tests/release_regressions.sh

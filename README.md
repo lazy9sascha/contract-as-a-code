@@ -9,7 +9,7 @@ complete schema in versioned metadata; they do not enforce its obligations.
 
 ## Roadmap
 
-- **0.10.0 · In development.** Generate a reviewable contract draft from a selected project. [Scope and remaining work](docs/ROADMAP.md#0100-contract-drafts)
+- **[0.10.0 · Released](https://github.com/lazy9sascha/contract-as-a-code/releases/tag/v0.10.0).** Generate a reviewable contract draft from a selected project. [Verified scope and follow-up work](docs/ROADMAP.md#0100-contract-drafts)
 - **0.11.0 · Planned after 0.10.0.** Enforce selected CAAC rules with contract lint and an execution harness. Trace a result to its clause, code and test revisions and rerun it when a bound revision changes. [Example and completion criteria](docs/ROADMAP.md#0110-execution-evidence)
 
 [Browse the backlog by milestone](docs/ROADMAP.md#backlog)

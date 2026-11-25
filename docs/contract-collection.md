@@ -62,7 +62,7 @@ Check the selected file against the [source syntax profile](../contracts/tooling
 
 The [collection journey test](../tests/collection_journey.rs) exercises a fixed synthetic handoff through source intake, collection and explicit candidate inputs. Its authored questions are fixture inputs, not automatically discovered findings. The test does not run an LLM or prove the quality of skill-guided reasoning.
 
-The full [0.10 roadmap](ROADMAP.md) remains incomplete. Semantic contract identification, automated comparison, graph-based sizing and broader legal composition require further work. The optional evidence-bound apply path rechecks citations, not their semantic truth.
+The [0.10.0 closure review](ROADMAP.md#closure-review) records the verified draft-generation scope. Semantic contract identification, automated comparison, graph-based sizing and broader legal composition require further work. The optional evidence-bound apply path rechecks citations, not their semantic truth.
 
 ## Optional caller-supplied run inputs
 

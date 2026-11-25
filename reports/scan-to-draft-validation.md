@@ -2,6 +2,8 @@
 
 ## Scope
 
+The historical itoa and itsdangerous runs below used inputs retained outside the public repository. Their output hashes identify those runs. To reproduce a separate, smaller draft with public inputs and expected hashes, run the [pinned itoa formatting example](../examples/candidate/itoa/README.md).
+
 The [scan-to-draft procedure](../docs/scan-to-draft.md) was exercised by coding assistants against local, pinned `dtolnay/itoa` source at commit `9339ca99a43c550b5ee36e2afe524d1c90413461`. These were actual LLM-authored inputs followed by CAAC CLI publication, not prewritten user answers or mocked model responses. No target build, import, test, benchmark, network request or installed analyzer was required.
 
 This validates a bounded assistant workflow, not a standalone model-provider command, semantic correctness, unattended generalization or an accepted contract. The same LLM need not choose identical wording on replay.

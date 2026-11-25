@@ -234,7 +234,7 @@ Acceptance establishes a reviewed implementation target. It does not establish e
 
 ## Sizing implementation status (non-normative)
 
-The typed candidate CLI supports an XS article with one operation or one typed expression. An expression case binds directly to its expression and declares the expected result. Flat S also supports expression targets. S through XL support subitems, M and L support upper-level hierarchies, and XL writes one review file per module. The author selects the scope and size. See [candidate authoring](docs/candidate-authoring.md) for supported shapes and CLI limits.
+The author selects the scope and size. The [typed authoring guide](docs/candidate-authoring.md#presentation-and-boundaries) describes the layouts the CLI accepts.
 
 ## Case status (non-normative)
 

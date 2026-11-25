@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.1]
+
+- Tag the checked commit only after its version and release checks pass. Keep staged and untracked files intact when release checks fail.
+- Correct the draft-sizing instructions and release status. Add a public replay for a pinned itoa formatting example.
+- Keep candidate fixture hashes stable when Git converts line endings on checkout.
+
 ## [0.10.0]
 
 - Create a typed contract draft from structured answers with `caac candidate apply`. Verify the generated review, trace clause and case references, and revise a draft while retaining its provenance.
