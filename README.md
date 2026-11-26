@@ -55,7 +55,13 @@ behavior, clause IDs, and acceptance cases. Read it before changing any code.
 
 ## Quickstart
 
-See [docs/quickstart.md](docs/quickstart.md) for a five-minute guide.
+See [docs/quickstart.md](docs/quickstart.md) for a five-minute CLI guide.
+
+Use a coding agent to draft or review a contract. Choose the skill in the
+[feature map and flowchart](docs/skill-workflows.md).
+
+For a local MCP client, start the installed binary with `caac mcp`. The
+[`caac_lint` tool](docs/skill-workflows.md#local-mcp-review) checks selected Markdown.
 
 ## Run
 
@@ -66,6 +72,9 @@ cargo run -- check --json CONTRACT.md contracts/tooling.md examples/batch-divisi
 
 A successful check reports declared syntax only. Semantic review remains
 pending. Exit codes: 0 for success, 1 for findings, 2 for input errors.
+
+Run `cargo run -- lint CONTRACT.md` to validate case inputs, results, and clause
+references. See [contract lint](docs/contract-lint.md).
 
 Create a new draft in an absent directory:
 

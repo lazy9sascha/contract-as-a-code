@@ -99,7 +99,7 @@ Ticket IDs refer to files in `.dev/tickets/` in a development checkout. Assign i
 | CLI library reuse | Decide whether a shared argument parser preserves the four commands' inputs, diagnostics and outputs. | CAAC-35 |
 | PigeonMQ validation | Trace one selected operation from contract to test and reproduce a failure case. | Open proposal |
 | CooCoo pilot | After PigeonMQ validation, evaluate one integration against agreed success and failure criteria. Its role in 1.0.0 remains open. | Open proposal |
-| Rust MCP adapter | Return the same results and errors as the CLI through the shared core. | Open proposal |
+| Skill and MCP workflow | Local MCP lint shares the CLI checker. Extend MCP review to candidate verification and clause tracing. | [Local MCP workflow and checks](skill-workflows.md#local-mcp-review) |
 | Coop knowledge base | Resolve an exact contract revision and flag stale or inaccessible copies. | Open proposal |
 | Skill distribution | Package the CAAC authoring skill for installation after the core workflow is validated. | Deferred |
 

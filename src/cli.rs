@@ -2,7 +2,7 @@ use caac::{author, checker};
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 
-const ROOT_USAGE: &str = "Usage:\n  caac review-findings --collection FILE --packet FILE --findings FILE --base FILE [--contract FILE]... [--run-input FILE]... [--root FILE | --root-assessment FILE] [--baseline FILE] [--crawk-modules FILE --crawk-deps FILE --crawk-snapshot FILE --crawk-source-root DIR] --output NEW_DIRECTORY\n  caac review-packet --collection FILE [--contract FILE]... [--run-input FILE]... [--root FILE | --root-assessment FILE] [--baseline FILE] [--crawk-modules FILE --crawk-deps FILE --crawk-snapshot FILE --crawk-source-root DIR] --output NEW_FILE\n  caac discover --directory DIR [--directory DIR...] [--depth 0..4]\n  caac collect [--contract FILE]... [--run-input FILE]... [--root FILE | --root-assessment FILE] [--baseline FILE] [--crawk-modules FILE --crawk-deps FILE --crawk-snapshot FILE --crawk-source-root DIR] --output NEW_FILE\n  caac scratch OUTPUT --title TITLE [--size XS|S|M]\n  caac plugin OUTPUT --title TITLE --source FILE... [--size XS|S|M]\n  caac migration OUTPUT --title TITLE --source FILE... [--size XS|S|M]\n  caac candidate schema\n  caac candidate apply --base DRAFT --answers ANSWERS --output NEW_DIRECTORY [--review-receipt RECEIPT --findings FILE --collection FILE --packet FILE ...]\n  caac candidate interview --base DRAFT --answers JOURNAL --output NEW_DIRECTORY [--resume]\n  caac candidate verify --candidate FILE --provenance FILE --review FILE [--trace ID]\n  caac candidate compare-review --candidate FILE --provenance FILE --review ORIGINAL --edited EDITED --output NEW_DIRECTORY\n  caac candidate revise --candidate FILE --provenance FILE --review ORIGINAL (--proposal PROPOSAL | --presentation REQUEST) --output NEW_DIRECTORY\n  caac baseline check BASELINE\n  caac check [--json] FILE...\n  caac watch [--interval SECS] FILE...\n  caac interview [--auto] [--suggest] [--source FILE | --baseline FILE] FILE...\n  caac resume FILE...\n  caac run [--source FILE | --baseline FILE] [--max-iterations N] FILE...\n  caac gen INPUT... --output FILE\n  caac md INPUT... --output FILE\n  caac parse INPUT --output FILE\n  caac extract INPUT --output FILE\n  caac sync INPUT --code FILE --docs FILE [--watch] [--interval SECS]\n  caac pattern list\n  caac pattern gen ID --output FILE\n  caac sync INPUT --code FILE --docs FILE [--watch] [--interval SECS]\n  caac --help";
+const ROOT_USAGE: &str = "Usage:\n  caac review-findings --collection FILE --packet FILE --findings FILE --base FILE [--contract FILE]... [--run-input FILE]... [--root FILE | --root-assessment FILE] [--baseline FILE] [--crawk-modules FILE --crawk-deps FILE --crawk-snapshot FILE --crawk-source-root DIR] --output NEW_DIRECTORY\n  caac review-packet --collection FILE [--contract FILE]... [--run-input FILE]... [--root FILE | --root-assessment FILE] [--baseline FILE] [--crawk-modules FILE --crawk-deps FILE --crawk-snapshot FILE --crawk-source-root DIR] --output NEW_FILE\n  caac discover --directory DIR [--directory DIR...] [--depth 0..4]\n  caac collect [--contract FILE]... [--run-input FILE]... [--root FILE | --root-assessment FILE] [--baseline FILE] [--crawk-modules FILE --crawk-deps FILE --crawk-snapshot FILE --crawk-source-root DIR] --output NEW_FILE\n  caac scratch OUTPUT --title TITLE [--size XS|S|M]\n  caac plugin OUTPUT --title TITLE --source FILE... [--size XS|S|M]\n  caac migration OUTPUT --title TITLE --source FILE... [--size XS|S|M]\n  caac candidate schema\n  caac candidate apply --base DRAFT --answers ANSWERS --output NEW_DIRECTORY [--review-receipt RECEIPT --findings FILE --collection FILE --packet FILE ...]\n  caac candidate interview --base DRAFT --answers JOURNAL --output NEW_DIRECTORY [--resume]\n  caac candidate verify --candidate FILE --provenance FILE --review FILE [--trace ID]\n  caac candidate compare-review --candidate FILE --provenance FILE --review ORIGINAL --edited EDITED --output NEW_DIRECTORY\n  caac candidate revise --candidate FILE --provenance FILE --review ORIGINAL (--proposal PROPOSAL | --presentation REQUEST) --output NEW_DIRECTORY\n  caac baseline check BASELINE\n  caac check [--json] FILE...\n  caac lint [--json] FILE...\n  caac mcp\n  caac watch [--interval SECS] FILE...\n  caac interview [--auto] [--suggest] [--source FILE | --baseline FILE] FILE...\n  caac resume FILE...\n  caac run [--source FILE | --baseline FILE] [--max-iterations N] FILE...\n  caac gen INPUT... --output FILE\n  caac md INPUT... --output FILE\n  caac parse INPUT --output FILE\n  caac extract INPUT --output FILE\n  caac sync INPUT --code FILE --docs FILE [--watch] [--interval SECS]\n  caac pattern list\n  caac pattern gen ID --output FILE\n  caac sync INPUT --code FILE --docs FILE [--watch] [--interval SECS]\n  caac --help";
 
 pub fn run<I>(args: I) -> i32
 where
@@ -25,7 +25,8 @@ where
         "collect" => run_collect(rest),
         "review-packet" => run_review_packet(rest),
         "review-findings" => run_review_findings(rest),
-        "check" => run_check(rest),
+        "check" | "lint" => run_check(command, rest),
+        "mcp" => run_mcp(rest),
         "baseline" => run_baseline(rest),
         "candidate" => run_candidate(rest),
         "watch" => run_watch(rest),
@@ -39,6 +40,24 @@ where
         "pattern" => run_pattern_cmd(rest),
         "run" => run_run_cmd(rest),
         _ => argument_error(&format!("Unknown command: {command}"), ROOT_USAGE),
+    }
+}
+
+fn run_mcp(args: &[String]) -> i32 {
+    let usage = "Usage: caac mcp";
+    if args.len() == 1 && matches!(args[0].as_str(), "--help" | "-h") {
+        println!("{usage}\nServe the local contract lint tool over MCP stdio.");
+        return 0;
+    }
+    if !args.is_empty() {
+        return argument_error("The MCP server takes no arguments.", usage);
+    }
+    match crate::mcp::serve_stdio() {
+        Ok(()) => 0,
+        Err(error) => {
+            eprintln!("ERROR: {error}");
+            2
+        }
     }
 }
 
@@ -741,7 +760,20 @@ fn run_sync_cmd(args: &[String]) -> i32 {
     )
 }
 
-fn run_check(args: &[String]) -> i32 {
+fn run_check(command: &str, args: &[String]) -> i32 {
+    let (usage, summary, field) = if command == "lint" {
+        (
+            "Usage: caac lint [--json] FILE...",
+            "declared syntax and case bindings",
+            "lint",
+        )
+    } else {
+        (
+            "Usage: caac check [--json] FILE...",
+            "declared syntax only",
+            "syntax",
+        )
+    };
     let mut json_output = false;
     let mut positional_only = false;
     let mut files = Vec::new();
@@ -751,28 +783,28 @@ fn run_check(args: &[String]) -> i32 {
         } else if argument == "--" {
             positional_only = true;
         } else if matches!(argument.as_str(), "--help" | "-h") {
-            print_check_help();
+            println!("Check {summary}. Semantic review remains pending.\n\n{usage}");
+            println!("\n  --json   Print machine-readable diagnostics.");
             return 0;
         } else if argument == "--json" {
             json_output = true;
         } else if argument.starts_with('-') {
-            return argument_error(
-                &format!("Unknown option: {argument}"),
-                "Usage: caac check [--json] FILE...",
-            );
+            return argument_error(&format!("Unknown option: {argument}"), usage);
         } else {
             files.push(PathBuf::from(argument));
         }
     }
 
     if files.is_empty() {
-        return argument_error(
-            "At least one input file is required.",
-            "Usage: caac check [--json] FILE...",
-        );
+        return argument_error("At least one input file is required.", usage);
     }
 
-    match checker::check(&files) {
+    let result = if command == "lint" {
+        checker::lint(&files)
+    } else {
+        checker::check(&files)
+    };
+    match result {
         Ok(diagnostics) => {
             if json_output {
                 let diagnostic_values = diagnostics
@@ -787,7 +819,7 @@ fn run_check(args: &[String]) -> i32 {
                     })
                     .collect::<Vec<_>>();
                 print_json(&json!({
-                    "syntax": if diagnostics.is_empty() { "passed" } else { "failed" },
+                    (field): if diagnostics.is_empty() { "passed" } else { "failed" },
                     "semantic_review": "pending",
                     "diagnostics": diagnostic_values,
                 }));
@@ -799,7 +831,7 @@ fn run_check(args: &[String]) -> i32 {
                     );
                 }
                 println!(
-                    "{}: declared syntax only. Semantic review pending.",
+                    "{}: {summary}. Semantic review pending.",
                     if diagnostics.is_empty() {
                         "PASS"
                     } else {
@@ -862,14 +894,6 @@ fn print_authoring_help(mode: &str) {
     if mode != "scratch" {
         println!("  --source FILE   Select a source file. Repeat for more files.");
     }
-}
-
-fn print_check_help() {
-    println!(
-        "Check declared Markdown syntax. Semantic review remains separate.\n\n\
-         Usage: caac check [--json] FILE...\n\n\
-         --json   Print machine-readable diagnostics."
-    );
 }
 
 fn run_baseline(args: &[String]) -> i32 {

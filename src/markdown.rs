@@ -357,6 +357,27 @@ fn span_issue(line: usize) -> Issue {
     }
 }
 
+pub(crate) fn table_cells(line: &str) -> Option<Vec<String>> {
+    let body = line.strip_prefix('|')?.strip_suffix('|')?;
+    let mut cells = Vec::new();
+    let mut cell = String::new();
+    let mut chars = body.chars().peekable();
+    while let Some(ch) = chars.next() {
+        match ch {
+            '\\' if chars.peek().is_some_and(|next| matches!(next, '|' | '\\')) => {
+                cell.push(chars.next()?)
+            }
+            '|' => {
+                cells.push(cell.trim().to_owned());
+                cell.clear();
+            }
+            _ => cell.push(ch),
+        }
+    }
+    cells.push(cell.trim().to_owned());
+    Some(cells)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -2,7 +2,9 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+use crate::markdown::{Kind, Line, table_cells};
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, schemars::JsonSchema)]
 pub struct Diagnostic {
     pub path: String,
     pub line: usize,
@@ -11,23 +13,60 @@ pub struct Diagnostic {
 }
 
 pub fn check(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
-    let mut diagnostics = Vec::new();
-    let mut definitions = HashMap::new();
-    let mut references = Vec::new();
+    analyze(paths, false)
+}
 
+pub fn lint(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
+    analyze(paths, true)
+}
+
+pub fn lint_documents<'a>(
+    documents: impl IntoIterator<Item = (&'a str, &'a str)>,
+) -> Vec<Diagnostic> {
+    let mut analysis = Analysis::default();
+    for (name, contents) in documents {
+        analysis.inspect(name, contents, true);
+    }
+    analysis.finish()
+}
+
+fn analyze(paths: &[PathBuf], lint_cases: bool) -> Result<Vec<Diagnostic>, String> {
+    let mut analysis = Analysis::default();
     for path in paths {
         let path_text = path.display().to_string();
         let contents = fs::read_to_string(path).map_err(|error| format!("{path_text}: {error}"))?;
+        analysis.inspect(&path_text, &contents, lint_cases);
+    }
+    Ok(analysis.finish())
+}
+
+#[derive(Default)]
+struct Analysis {
+    diagnostics: Vec<Diagnostic>,
+    definitions: HashMap<String, String>,
+    references: Vec<(String, String, usize)>,
+}
+
+impl Analysis {
+    fn inspect(&mut self, path_text: &str, contents: &str, lint_cases: bool) {
+        let Self {
+            diagnostics,
+            definitions,
+            references,
+        } = self;
         let mut clause_count = 0;
-        let projection = crate::markdown::project(&contents);
+        let projection = crate::markdown::project(contents);
         for issue in projection.issues {
             report(
-                &mut diagnostics,
-                &path_text,
+                diagnostics,
+                path_text,
                 issue.line,
                 issue.code,
                 issue.message,
             );
+        }
+        if lint_cases {
+            check_cases(&projection.lines, path_text, diagnostics, references);
         }
         for record in projection.lines {
             let line_number = record.number;
@@ -36,8 +75,8 @@ pub fn check(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
             if let Some(decision) = line.strip_prefix("OPEN:") {
                 let message = decision.trim();
                 report(
-                    &mut diagnostics,
-                    &path_text,
+                    diagnostics,
+                    path_text,
                     line_number,
                     "open-decision",
                     if message.is_empty() {
@@ -53,8 +92,8 @@ pub fn check(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
                 clause_count += 1;
                 if let Some(first_location) = definitions.get(identifier) {
                     report(
-                        &mut diagnostics,
-                        &path_text,
+                        diagnostics,
+                        path_text,
                         line_number,
                         "duplicate-id",
                         &format!("{identifier} already defined at {first_location}"),
@@ -75,8 +114,8 @@ pub fn check(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
                 });
                 if !has_actor || !has_obligation {
                     report(
-                        &mut diagnostics,
-                        &path_text,
+                        diagnostics,
+                        path_text,
                         line_number,
                         "clause-shape",
                         "Expected actor, normative marker, and obligation",
@@ -84,8 +123,8 @@ pub fn check(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
                 }
                 if body.split_whitespace().count() > 20 {
                     report(
-                        &mut diagnostics,
-                        &path_text,
+                        diagnostics,
+                        path_text,
                         line_number,
                         "clause-length",
                         "Clause exceeds 20 whitespace-separated words",
@@ -93,8 +132,8 @@ pub fn check(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
                 }
                 if body.contains(';') {
                     report(
-                        &mut diagnostics,
-                        &path_text,
+                        diagnostics,
+                        path_text,
                         line_number,
                         "semicolon",
                         "Split the clause without a semicolon",
@@ -102,16 +141,16 @@ pub fn check(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
                 }
             } else if looks_like_clause(line) {
                 report(
-                    &mut diagnostics,
-                    &path_text,
+                    diagnostics,
+                    path_text,
                     line_number,
                     "clause-shape",
                     "Expected ID | sentence",
                 );
             } else if has_unnumbered_obligation(&record.marker_text) {
                 report(
-                    &mut diagnostics,
-                    &path_text,
+                    diagnostics,
+                    path_text,
                     line_number,
                     "unnumbered-obligation",
                     "Normative line needs a clause ID",
@@ -121,14 +160,14 @@ pub fn check(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
             references.extend(
                 find_references(body)
                     .into_iter()
-                    .map(|identifier| (identifier, path_text.clone(), line_number)),
+                    .map(|identifier| (identifier, path_text.to_owned(), line_number)),
             );
         }
 
         if clause_count == 0 {
             report(
-                &mut diagnostics,
-                &path_text,
+                diagnostics,
+                path_text,
                 1,
                 "no-clauses",
                 "File contains no clause definitions",
@@ -136,18 +175,172 @@ pub fn check(paths: &[PathBuf]) -> Result<Vec<Diagnostic>, String> {
         }
     }
 
-    for (identifier, path, line_number) in references {
-        if !definitions.contains_key(&identifier) {
+    fn finish(mut self) -> Vec<Diagnostic> {
+        for (identifier, path, line_number) in self.references {
+            if !self.definitions.contains_key(&identifier) {
+                report(
+                    &mut self.diagnostics,
+                    &path,
+                    line_number,
+                    "unknown-id",
+                    &format!("Undefined clause {identifier}"),
+                );
+            }
+        }
+        self.diagnostics
+    }
+}
+
+fn check_cases(
+    lines: &[Line],
+    path: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+    references: &mut Vec<(String, String, usize)>,
+) {
+    let mut sections = 0;
+    for (index, heading) in lines.iter().enumerate() {
+        let Kind::Heading { level, title } = &heading.kind else {
+            continue;
+        };
+        if !matches!(
+            title.as_str(),
+            "Contract cases" | "Acceptance cases" | "Cases"
+        ) {
+            continue;
+        }
+        sections += 1;
+        let mut table = lines[index + 1..]
+            .iter()
+            .take_while(
+                |line| !matches!(&line.kind, Kind::Heading { level: next, .. } if next <= level),
+            )
+            .filter(|line| line.text.starts_with('|'));
+        let Some(header) = table.next() else {
             report(
-                &mut diagnostics,
-                &path,
-                line_number,
-                "unknown-id",
-                &format!("Undefined clause {identifier}"),
+                diagnostics,
+                path,
+                heading.number,
+                "missing-case-table",
+                "Add a case table with at least one case.",
+            );
+            continue;
+        };
+        let header_matches = table_cells(&header.text)
+            .is_some_and(|cells| cells == ["Case", "Input", "Expected result", "Clauses"]);
+        if !header_matches {
+            report(
+                diagnostics,
+                path,
+                header.number,
+                "case-table-header",
+                "Use | Case | Input | Expected result | Clauses |. Put initial conditions and inputs in Input.",
+            );
+            continue;
+        }
+        let divider = table.next();
+        let divider_matches = divider
+            .filter(|row| row.number == header.number + 1)
+            .and_then(|row| table_cells(&row.text))
+            .is_some_and(|cells| {
+                cells.len() == 4
+                    && cells.iter().all(|cell| {
+                        let dashes = cell.strip_prefix(':').unwrap_or(cell);
+                        let dashes = dashes.strip_suffix(':').unwrap_or(dashes);
+                        dashes.len() >= 3 && dashes.bytes().all(|byte| byte == b'-')
+                    })
+            });
+        if !divider_matches {
+            report(
+                diagnostics,
+                path,
+                divider.unwrap_or(header).number,
+                "case-table-divider",
+                "Add | --- | --- | --- | --- | after the case header.",
+            );
+            continue;
+        }
+        let mut previous = header.number + 1;
+        for row in table {
+            if row.number != previous + 1 {
+                report(
+                    diagnostics,
+                    path,
+                    row.number,
+                    "case-table-layout",
+                    "Keep the header, divider, and case rows on consecutive lines.",
+                );
+                break;
+            }
+            previous = row.number;
+            let Some(cells) = table_cells(&row.text) else {
+                report(
+                    diagnostics,
+                    path,
+                    row.number,
+                    "case-row",
+                    "Give the case four pipe-delimited cells.",
+                );
+                continue;
+            };
+            let [case, input, expected, binding] = cells.as_slice() else {
+                report(
+                    diagnostics,
+                    path,
+                    row.number,
+                    "case-row",
+                    "Give the case four cells. Escape pipes inside a value.",
+                );
+                continue;
+            };
+            if [case, input, expected, binding]
+                .into_iter()
+                .any(|cell| cell.is_empty())
+            {
+                report(
+                    diagnostics,
+                    path,
+                    row.number,
+                    "case-row",
+                    "Fill in the case name, input, expected result, and clauses.",
+                );
+                continue;
+            }
+            for entry in binding.split(',').map(str::trim) {
+                let id = entry.strip_prefix('@').unwrap_or(entry);
+                if !valid_id(id) {
+                    report(
+                        diagnostics,
+                        path,
+                        row.number,
+                        "case-clause-id",
+                        "List existing clause IDs separated by commas in the Clauses column.",
+                    );
+                    break;
+                }
+                if entry == id {
+                    references.push((id.to_owned(), path.to_owned(), row.number));
+                }
+            }
+        }
+        if previous == header.number + 1 {
+            report(
+                diagnostics,
+                path,
+                header.number,
+                "missing-case-table",
+                "Add at least one case with a clause reference.",
             );
         }
     }
-    Ok(diagnostics)
+    if sections == 0 {
+        report(
+            diagnostics,
+            path,
+            1,
+            "missing-case-table",
+            "Add a Contract cases section with a case table.",
+        );
+    }
 }
 
 fn report(diagnostics: &mut Vec<Diagnostic>, path: &str, line: usize, code: &str, message: &str) {
