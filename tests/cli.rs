@@ -626,6 +626,71 @@ fn checker_cli_uses_zero_one_and_two_exit_codes_and_json_reports() {
 }
 
 #[test]
+fn lint_requires_explicit_case_inputs_and_existing_clause_bindings() {
+    let dir = tempdir().unwrap();
+    let header = "| Case | Input | Expected result | Clauses |";
+    let divider = "| --- | --- | --- | --- |";
+    let row = "| Replay | Same input | Same result | RULE-001, @RULE-001 |";
+    let valid_table = format!("{header}\n{divider}\n{row}");
+    let cases = [
+        (valid_table.clone(), 0, None),
+        (
+            valid_table.replace("| Input |", "| Action |"),
+            1,
+            Some(("case-table-header", 4)),
+        ),
+        (
+            valid_table.replace("Same input", ""),
+            1,
+            Some(("case-row", 6)),
+        ),
+        (
+            valid_table.replace("RULE-001, @RULE-001", "RULE-999"),
+            1,
+            Some(("unknown-id", 6)),
+        ),
+        (
+            valid_table.replace("RULE-001, @RULE-001", "See RULE-001"),
+            1,
+            Some(("case-clause-id", 6)),
+        ),
+        (
+            valid_table.replace(divider, &format!("\n{divider}")),
+            1,
+            Some(("case-table-divider", 6)),
+        ),
+        (
+            format!("```markdown\n{valid_table}\n```"),
+            1,
+            Some(("missing-case-table", 3)),
+        ),
+    ];
+    for (index, (table, exit, finding)) in cases.into_iter().enumerate() {
+        let draft = format!("{VALID}\n## Acceptance cases\n{table}\n");
+        let path = write_file(
+            dir.path(),
+            &format!("contract-{index}.md"),
+            draft.as_bytes(),
+        );
+        let syntax = run_check(std::slice::from_ref(&path));
+        assert_eq!(syntax.status.code(), Some(0), "{draft}");
+        let output = caac().args(["lint", "--json"]).arg(&path).output().unwrap();
+        assert_eq!(output.status.code(), Some(exit), "{draft}");
+        let report = json_output(&output);
+        assert_eq!(report["semantic_review"], "pending");
+        if let Some((code, line)) = finding {
+            assert_eq!(report["lint"], "failed");
+            assert_eq!(report["diagnostics"][0]["code"], code);
+            assert_eq!(report["diagnostics"][0]["line"], line);
+            assert_eq!(report["diagnostics"][0]["path"], path.to_str().unwrap());
+        } else {
+            assert_eq!(report["lint"], "passed");
+            assert_eq!(report["diagnostics"], json!([]));
+        }
+    }
+}
+
+#[test]
 fn check_honors_the_option_terminator_for_a_file_named_help() {
     let temporary = tempdir().unwrap();
     let path = write_file(temporary.path(), "--help", VALID.as_bytes());

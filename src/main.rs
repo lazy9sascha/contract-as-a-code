@@ -1,4 +1,5 @@
 mod cli;
+mod mcp;
 
 fn main() {
     let args = std::env::args_os()

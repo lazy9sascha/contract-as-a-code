@@ -11,6 +11,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: checkout byte stability
         run: sh tests/checkout_bytes.sh
+      - name: skill workflow documentation
+        run: python3 scripts/render-skill-workflows.py --check
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: cargo fmt
@@ -21,5 +23,7 @@ jobs:
         run: cargo clippy --all-targets --locked -- -D warnings
       - name: contract syntax check
         run: cargo run -- check CONTRACT.md contracts/tooling.md examples/batch-division.md
+      - name: contract case lint
+        run: cargo run --locked -- lint CONTRACT.md examples/batch-division.md
       - name: release helper regression checks
         run: sh tests/release_regressions.sh

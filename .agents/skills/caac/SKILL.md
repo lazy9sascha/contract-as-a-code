@@ -1,6 +1,6 @@
 ---
 name: "caac"
-description: "Use when writing or reviewing a contract in the Contract as a Code style: clauses with IDs, defined terms, short normative sentences, acceptance cases, and evidence-based completion. Triggers: contract, clause, CAAC, contract-as-code, contract completion, contract review, write contract, review contract."
+description: "Author or revise a CAAC contract. Use to draft a project or component contract from requirements or source, define clauses and acceptance cases, or apply approved changes."
 ---
 
 # Contract as a Code (CAAC)
@@ -12,11 +12,15 @@ implemented; draft generation and integrity checks do not provide that gate.
 
 ## When to use
 
+For an independent review of an existing draft, use [caac-review](../caac-review/SKILL.md).
+
 - You need to define permitted behavior before implementation starts.
 - You need machine-checkable clauses with IDs and acceptance cases.
 - You need evidence-based completion, not an LLM assertion.
 
 ## Source-informed draft workflow
+
+State whether the user asked for a project or a component. For a project request, map existing product promises before writing a draft. Retain each promise in a clause, an explicit exclusion, or an open decision. Record any component-only result as incomplete at project scope.
 
 When asked to generate a draft from an existing project, execute the complete [scan-to-draft procedure](../../../docs/scan-to-draft.md). You are the LLM author: generate the intermediate typed base and answers, call the tools, inspect failures and deliver verified candidate JSON plus Markdown. Do not hand the user blank inputs to complete. Keep source facts, inferred requirements and human acceptance separate. This is assistant orchestration, not an embedded model-provider CLI.
 

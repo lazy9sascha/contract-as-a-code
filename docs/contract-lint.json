@@ -1,0 +1,41 @@
+{
+  "title": "Contract lint",
+  "command": "cargo run --locked -- lint --json CONTRACT.md",
+  "features": [
+    {
+      "id": "syntax",
+      "name": "Declared syntax",
+      "checks": "Clause shape, duplicate IDs, and unresolved references."
+    },
+    {
+      "id": "case-table",
+      "name": "Case table",
+      "sections": ["Contract cases", "Acceptance cases", "Cases"],
+      "columns": ["Case", "Input", "Expected result", "Clauses"]
+    },
+    {
+      "id": "case-binding",
+      "name": "Case binding",
+      "row_cells": 4,
+      "empty_cells": "reject",
+      "clause_separator": ",",
+      "clause_prefix": "optional @",
+      "clause_resolution": "selected files"
+    }
+  ],
+  "flowchart": {
+    "nodes": {
+      "files": "Read selected Markdown contracts",
+      "syntax": "Check declared syntax",
+      "cases": "Check case tables and clause bindings",
+      "report": "Report findings by file and line"
+    },
+    "edges": [["files", "syntax"], ["syntax", "cases"], ["cases", "report"]]
+  },
+  "exit_codes": {
+    "0": "Selected checks passed",
+    "1": "Checks found defects",
+    "2": "Argument or input error"
+  },
+  "semantic_review": "pending"
+}
